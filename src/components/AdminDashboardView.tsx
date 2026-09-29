@@ -688,7 +688,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         {/* Verified Host Badge Toggle */}
-                        {effectiveRole === 'HOST' || effectiveRole === 'ADMIN' ? (
+                        {displayRole === 'HOST' || displayRole === 'ADMIN' ? (
                           <HStack
                             gap={1}
                             style={{
@@ -697,7 +697,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                             }}
                             onClick={async () => {
                               try {
-                                await updateUserRole(u.id, effectiveRole, !u.is_verified_host);
+                                await updateUserRole(u.id, displayRole, !u.is_verified_host);
                                 showSuccess(`Đã cập nhật tích xanh cho ${u.full_name}!`);
                               } catch (err) {
                                 alert('Lỗi: ' + (err as Error).message);
