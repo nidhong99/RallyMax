@@ -53,7 +53,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     updateUserRole,
     resetUserReliability,
     deleteUser,
-    purgeMockUsers,
     cancelEvent,
     deleteEvent,
     isRealSupabase,
@@ -597,16 +596,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <option value="HOST">👑 Host</option>
                 <option value="PLAYER">🏸 Player</option>
               </select>
-
-              <Button
-                size="sm"
-                variant="destructive"
-                label="🧹 Xóa sạch tài khoản mẫu"
-                onClick={() => {
-                  purgeMockUsers();
-                  showSuccess('Đã dọn dẹp và xóa sạch toàn bộ tài khoản người chơi mẫu!');
-                }}
-              />
             </HStack>
           </HStack>
 
