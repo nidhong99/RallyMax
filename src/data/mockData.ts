@@ -18,80 +18,7 @@ export const MOCK_DISTRICTS: District[] = [
   { code: 'DN_HC', province_code: 'DN', name: 'Hải Châu' },
 ];
 
-export const MOCK_PROFILES: Profile[] = [
-  {
-    id: 'user-host-1',
-    email: 'hoangnam.badminton@gmail.com',
-    full_name: 'Nguyễn Hoàng Nam (Host)',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    phone_number: '0912345678',
-    gender: 'MALE',
-    birth_year: 1993,
-    skill_level: 'HIGH_INTERMEDIATE',
-    dominant_hand: 'RIGHT',
-    play_style: 'ALL_ROUND',
-    bio: 'Host câu lạc bộ RallyMax Ba Đình. Đã tổ chức hơn 80 buổi giao lưu, luôn đảm bảo sân đẹp, cầu mới Victor.',
-    district_code: 'HN_BD',
-    reliability_score: 99.5,
-    total_matches_played: 112,
-    total_no_shows: 0,
-    created_at: '2025-01-10T00:00:00Z',
-  },
-  {
-    id: 'user-player-1',
-    email: 'minhtuan.dev@gmail.com',
-    full_name: 'Trần Minh Tuấn (Tôi)',
-    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    phone_number: '0987654321',
-    gender: 'MALE',
-    birth_year: 1997,
-    skill_level: 'INTERMEDIATE',
-    dominant_hand: 'RIGHT',
-    play_style: 'DOUBLES_BACK',
-    bio: 'Dân IT mê cầu lông, tìm kèo tối 2-4-6 hoặc sáng chủ nhật giao lưu rèn luyện sức khoẻ.',
-    district_code: 'HN_CG',
-    reliability_score: 98.0,
-    total_matches_played: 34,
-    total_no_shows: 0,
-    created_at: '2025-02-15T00:00:00Z',
-  },
-  {
-    id: 'user-player-2',
-    email: 'lanphuong.cute@gmail.com',
-    full_name: 'Lê Lan Phương',
-    avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    phone_number: '0903123456',
-    gender: 'FEMALE',
-    birth_year: 2000,
-    skill_level: 'LOW_INTERMEDIATE',
-    dominant_hand: 'LEFT',
-    play_style: 'DOUBLES_FRONT',
-    bio: 'Tay trái, chuyên làm cầu trên lưới, cần tìm kèo vui vẻ hòa đồng, học hỏi nâng cao trình độ.',
-    district_code: 'HN_BD',
-    reliability_score: 100.0,
-    total_matches_played: 18,
-    total_no_shows: 0,
-    created_at: '2025-03-01T00:00:00Z',
-  },
-  {
-    id: 'user-player-3',
-    email: 'quanghuy.smash@gmail.com',
-    full_name: 'Đặng Quang Huy',
-    avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    phone_number: '0938112233',
-    gender: 'MALE',
-    birth_year: 1995,
-    skill_level: 'HIGH_INTERMEDIATE',
-    dominant_hand: 'RIGHT',
-    play_style: 'DOUBLES_BACK',
-    bio: 'Cầu sau công rát, thích các kèo đánh đôi tốc độ cao.',
-    district_code: 'HCM_Q10',
-    reliability_score: 92.0,
-    total_matches_played: 45,
-    total_no_shows: 1,
-    created_at: '2025-02-01T00:00:00Z',
-  },
-];
+export const MOCK_PROFILES: Profile[] = [];
 
 export const MOCK_VENUES: Venue[] = [
   {
@@ -102,7 +29,7 @@ export const MOCK_VENUES: Venue[] = [
     latitude: 21.0375,
     longitude: 105.8152,
     total_courts: 6,
-    created_by: 'user-host-1',
+    created_by: 'system',
     created_at: '2025-01-01T00:00:00Z',
   },
   {
@@ -113,7 +40,7 @@ export const MOCK_VENUES: Venue[] = [
     latitude: 21.0412,
     longitude: 105.8143,
     total_courts: 8,
-    created_by: 'user-host-1',
+    created_by: 'system',
     created_at: '2025-01-01T00:00:00Z',
   },
   {
@@ -124,7 +51,7 @@ export const MOCK_VENUES: Venue[] = [
     latitude: 10.7761,
     longitude: 106.6712,
     total_courts: 12,
-    created_by: 'user-host-1',
+    created_by: 'system',
     created_at: '2025-01-01T00:00:00Z',
   },
   {
@@ -135,39 +62,12 @@ export const MOCK_VENUES: Venue[] = [
     latitude: 21.0354,
     longitude: 105.7942,
     total_courts: 10,
-    created_by: 'user-host-1',
+    created_by: 'system',
     created_at: '2025-01-01T00:00:00Z',
   },
 ];
 
 export const MOCK_EVENTS: Event[] = [];
 
-export const MOCK_REVIEWS: Review[] = [
-  {
-    id: 'rev-1',
-    event_id: 'event-past-1',
-    reviewer_id: 'user-player-1',
-    reviewee_id: 'user-host-1',
-    review_type: 'PLAYER_TO_HOST',
-    rating: 5,
-    punctuality_rating: 5,
-    comment: 'Host Nam tổ chức rất chu đáo, sắp xếp cặp đấu cân bằng và tạo không khí cực kỳ thoải mái!',
-    is_no_show: false,
-    created_at: '2026-09-01T22:00:00Z',
-    reviewer: MOCK_PROFILES[1],
-  },
-  {
-    id: 'rev-2',
-    event_id: 'event-past-1',
-    reviewer_id: 'user-host-1',
-    reviewee_id: 'user-player-1',
-    review_type: 'HOST_TO_PLAYER',
-    rating: 5,
-    skill_accuracy_rating: 5,
-    punctuality_rating: 5,
-    comment: 'Tuấn đến đúng giờ, đánh chắc tay, giao tiếp đôi rất tốt. Rất mong gặp lại ở các kèo sau.',
-    is_no_show: false,
-    created_at: '2026-09-01T22:30:00Z',
-    reviewer: MOCK_PROFILES[0],
-  },
-];
+export const MOCK_REVIEWS: Review[] = [];
+

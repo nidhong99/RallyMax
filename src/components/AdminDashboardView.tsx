@@ -52,6 +52,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     deleteVenue,
     updateUserRole,
     resetUserReliability,
+    deleteUser,
+    purgeMockUsers,
     cancelEvent,
     deleteEvent,
     isRealSupabase,
@@ -595,6 +597,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <option value="HOST">👑 Host</option>
                 <option value="PLAYER">🏸 Player</option>
               </select>
+
+              <Button
+                size="sm"
+                variant="destructive"
+                label="🧹 Xóa sạch tài khoản mẫu"
+                onClick={() => {
+                  purgeMockUsers();
+                  showSuccess('Đã dọn dẹp và xóa sạch toàn bộ tài khoản người chơi mẫu!');
+                }}
+              />
             </HStack>
           </HStack>
 
@@ -721,23 +733,42 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         />
                       </td>
                       <td style={{ padding: 'var(--spacing-3)', textAlign: 'right' }}>
-                        {score < 100 && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            label="Khôi phục 100%"
-                            onClick={async () => {
-                              if (confirm(`Khôi phục 100% điểm uy tín cho ${u.full_name || u.email}?`)) {
-                                try {
-                                  await resetUserReliability(u.id);
-                                  showSuccess(`Đã khôi phục 100% uy tín cho ${u.full_name}!`);
-                                } catch (err) {
-                                  alert('Lỗi: ' + (err as Error).message);
+                        <HStack gap={1} style={{ justifyContent: 'flex-end' }}>
+                          {score < 100 && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              label="Khôi phục 100%"
+                              onClick={async () => {
+                                if (confirm(`Khôi phục 100% điểm uy tín cho ${u.full_name || u.email}?`)) {
+                                  try {
+                                    await resetUserReliability(u.id);
+                                    showSuccess(`Đã khôi phục 100% uy tín cho ${u.full_name}!`);
+                                  } catch (err) {
+                                    alert('Lỗi: ' + (err as Error).message);
+                                  }
                                 }
-                              }
-                            }}
-                          />
-                        )}
+                              }}
+                            />
+                          )}
+                          {!isCurrentAdmin && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              label="Xóa"
+                              onClick={async () => {
+                                if (confirm(`Bạn có chắc chắn muốn xóa hoàn toàn tài khoản "${u.full_name || u.email}"?`)) {
+                                  try {
+                                    await deleteUser(u.id);
+                                    showSuccess(`Đã xóa vĩnh viễn tài khoản ${u.full_name || u.email}!`);
+                                  } catch (err) {
+                                    alert('Lỗi khi xóa tài khoản: ' + (err as Error).message);
+                                  }
+                                }
+                              }}
+                            />
+                          )}
+                        </HStack>
                       </td>
                     </tr>
                   );

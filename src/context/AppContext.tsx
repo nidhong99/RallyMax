@@ -36,11 +36,34 @@ interface AppContextType {
   deleteVenue: (venueId: string) => Promise<void>;
   updateUserRole: (userId: string, newRole: 'PLAYER' | 'HOST' | 'ADMIN', isVerifiedHost?: boolean) => Promise<void>;
   resetUserReliability: (userId: string) => Promise<void>;
+  deleteUser: (userId: string) => Promise<void>;
+  purgeMockUsers: () => void;
   updateProfile: (profileData: Partial<Profile>) => Promise<void>;
   addReview: (reviewData: Partial<Review>) => Promise<void>;
   markNotificationRead: (id: string) => void;
   isRealSupabase: boolean;
 }
+
+const isMockEmail = (email?: string): boolean => {
+  if (!email) return false;
+  const e = email.toLowerCase().trim();
+  return (
+    e === 'user.google@gmail.com' ||
+    e === 'hoangnam.badminton@gmail.com' ||
+    e === 'minhtuan.dev@gmail.com' ||
+    e === 'lanphuong.cute@gmail.com' ||
+    e === 'quanghuy.smash@gmail.com'
+  );
+};
+
+const isMockId = (id?: string): boolean => {
+  if (!id) return false;
+  return (
+    id.startsWith('user-host-') ||
+    id.startsWith('user-player-') ||
+    id.startsWith('google-user-')
+  );
+};
 
 const generateUuid = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -58,7 +81,11 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [allUsers, setAllUsers] = useState<Profile[]>(() => {
     const saved = localStorage.getItem('rallymax_users');
-    return saved ? JSON.parse(saved) : MOCK_PROFILES;
+    let list: Profile[] = saved ? JSON.parse(saved) : MOCK_PROFILES;
+    // Permanently purge mock users
+    list = list.filter(u => !isMockEmail(u.email) && !isMockId(u.id));
+    localStorage.setItem('rallymax_users', JSON.stringify(list));
+    return list;
   });
 
   const [currentUser, setCurrentUser] = useState<Profile | null>(() => {
@@ -199,33 +226,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 1. Fetch profiles from Supabase database if reachable
     supabase.from('profiles').select('*').then(({ data, error }) => {
       if (data && data.length > 0 && !error) {
-        setAllUsers(prev => {
-          const map = new Map<string, Profile>();
-          prev.forEach(u => map.set(u.id, u));
-          data.forEach((p: any) => {
-            const isHost = p.role === 'HOST' || (p.email || '').toLowerCase() === 'nidhong99@gmail.com';
-            map.set(p.id, {
-              id: p.id,
-              email: p.email || '',
-              full_name: p.full_name || p.email?.split('@')[0] || 'Vận động viên',
-              avatar_url: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-              phone_number: p.phone_number || '',
-              gender: p.gender || 'OTHER',
-              role: isHost ? 'HOST' : (p.role || 'PLAYER'),
-              is_verified_host: p.is_verified_host ?? isHost,
-              skill_level: p.skill_level || 'BEGINNER',
-              dominant_hand: p.dominant_hand || 'RIGHT',
-              play_style: p.play_style || 'ALL_ROUND',
-              district_code: p.district_code || 'HN_BD',
-              reliability_score: p.reliability_score ?? 100,
-              total_matches_played: p.total_matches_played ?? 0,
-              total_no_shows: p.total_no_shows ?? 0,
-              created_at: p.created_at || new Date().toISOString(),
+        setAllUsers(() => {
+          const validProfiles = data
+            .filter((p: any) => !isMockEmail(p.email) && !isMockId(p.id))
+            .map((p: any) => {
+              const isHost = p.role === 'HOST' || (p.email || '').toLowerCase() === 'nidhong99@gmail.com';
+              return {
+                id: p.id,
+                email: p.email || '',
+                full_name: p.full_name || p.email?.split('@')[0] || 'Vận động viên',
+                avatar_url: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+                phone_number: p.phone_number || '',
+                gender: p.gender || 'OTHER',
+                role: isHost ? 'HOST' : (p.role || 'PLAYER'),
+                is_verified_host: p.is_verified_host ?? isHost,
+                skill_level: p.skill_level || 'BEGINNER',
+                dominant_hand: p.dominant_hand || 'RIGHT',
+                play_style: p.play_style || 'ALL_ROUND',
+                district_code: p.district_code || 'HN_BD',
+                reliability_score: p.reliability_score ?? 100,
+                total_matches_played: p.total_matches_played ?? 0,
+                total_no_shows: p.total_no_shows ?? 0,
+                created_at: p.created_at || new Date().toISOString(),
+              };
             });
-          });
-          const merged = Array.from(map.values());
-          localStorage.setItem('rallymax_users', JSON.stringify(merged));
-          return merged;
+          localStorage.setItem('rallymax_users', JSON.stringify(validProfiles));
+          return validProfiles;
         });
 
         // Sync currentUser if updated in Supabase
@@ -1081,14 +1107,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return current;
     });
 
+      if (supabase) {
+        try {
+          await supabase
+            .from('profiles')
+            .update({ reliability_score: 100, total_no_shows: 0, updated_at: new Date().toISOString() })
+            .eq('id', userId);
+        } catch (e) {}
+      }
+    };
+
+  const deleteUser = async (userId: string) => {
+    // 1. Remove from allUsers in memory and in localStorage
+    setAllUsers(prev => {
+      const updated = prev.filter(u => u.id !== userId);
+      localStorage.setItem('rallymax_users', JSON.stringify(updated));
+      return updated;
+    });
+
+    // 2. If deleting the currentUser, log them out
+    if (currentUser?.id === userId) {
+      logout();
+    }
+
+    // 3. Delete from Supabase profiles table
     if (supabase) {
       try {
-        await supabase
-          .from('profiles')
-          .update({ reliability_score: 100, total_no_shows: 0, updated_at: new Date().toISOString() })
-          .eq('id', userId);
-      } catch (e) {}
+        await supabase.from('profiles').delete().eq('id', userId);
+      } catch (err) {
+        console.warn('Supabase delete profile error:', err);
+      }
     }
+  };
+
+  const purgeMockUsers = () => {
+    setAllUsers(prev => {
+      const cleaned = prev.filter(u => !isMockEmail(u.email) && !isMockId(u.id));
+      localStorage.setItem('rallymax_users', JSON.stringify(cleaned));
+      return cleaned;
+    });
   };
 
   const updateProfile = async (profileData: Partial<Profile>) => {
@@ -1156,6 +1213,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteVenue,
         updateUserRole,
         resetUserReliability,
+        deleteUser,
+        purgeMockUsers,
         updateProfile,
         addReview,
         markNotificationRead,
