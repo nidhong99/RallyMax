@@ -31,8 +31,19 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
   );
 
   const isFull = totalApprovedPlayers >= event.max_players;
-  const isHost = currentUser ? event.host_id === currentUser.id : false;
-  const userRegistration = currentUser ? (event.registrations || []).find((r) => r.player_id === currentUser.id) : null;
+  const isCurrentUserHost = currentUser ? (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com') : false;
+  const isHost = currentUser
+    ? event.host_id === currentUser.id ||
+      Boolean(event.host?.email && currentUser.email && event.host.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+      (isCurrentUserHost && (event.host_id === 'user-host-1' || !event.host_id))
+    : false;
+  const userRegistration = currentUser
+    ? (event.registrations || []).find(
+        (r) =>
+          r.player_id === currentUser.id ||
+          Boolean(r.player?.email && currentUser.email && r.player.email.toLowerCase() === currentUser.email.toLowerCase())
+      )
+    : null;
 
   // Format date & time
   const startDate = new Date(event.start_time);

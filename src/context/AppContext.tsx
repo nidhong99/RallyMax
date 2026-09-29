@@ -65,7 +65,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const found = usersList.find(u => u.id === savedUserId);
       if (found) return found;
     }
-    return MOCK_PROFILES[1]; // Default Player Tuấn
+    return null; // Guest by default so "🔑 Đăng nhập" button appears on navbar
   });
 
   const [activeRole, setActiveRole] = useState<'player' | 'host'>(() => {
@@ -91,16 +91,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed: Event[] = JSON.parse(saved);
-        // Clean out legacy mock events and any event containing "test"
-        const cleaned = parsed.filter(e => {
-          if (!e || !e.id) return false;
-          // Purge mock events
-          if (e.id === 'event-1' || e.id === 'event-2' || e.id === 'event-3' || e.id === 'event-past-1') return false;
-          const title = (e.title || '').trim().toLowerCase();
-          return title !== 'test' && !title.includes('test');
-        });
-        localStorage.setItem('rallymax_events', JSON.stringify(cleaned));
-        return cleaned;
+        if (Array.isArray(parsed)) {
+          // Keep all valid events, never purge user events
+          return parsed.filter(e => e && e.id);
+        }
       } catch (e) {
         console.warn('Error parsing saved events:', e);
       }
@@ -312,6 +306,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : [profileToStore, ...prev];
       localStorage.setItem('rallymax_users', JSON.stringify(next));
       return next;
+    });
+
+    // Seamlessly link any previously created events to this logged-in account
+    setEvents(prev => {
+      let hasChange = false;
+      const updated = prev.map(e => {
+        const matchesEmail = Boolean(e.host?.email && email && e.host.email.toLowerCase() === email);
+        const wasHostDefault = isHost && (e.host_id === 'user-host-1' || !e.host_id || e.host_id.startsWith('user-'));
+        if (matchesEmail || wasHostDefault) {
+          hasChange = true;
+          return {
+            ...e,
+            host_id: profileToStore.id,
+            host: { ...(e.host || {}), ...profileToStore },
+          };
+        }
+        return e;
+      });
+      if (hasChange) {
+        localStorage.setItem('rallymax_events', JSON.stringify(updated));
+        return updated;
+      }
+      return prev;
     });
   };
 

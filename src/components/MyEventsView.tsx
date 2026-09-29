@@ -30,13 +30,24 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
   const [subTab, setSubTab] = useState<'hosting' | 'joining'>(() => (isHost ? 'hosting' : 'joining'));
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'CHECKED_IN' | 'CANCELLED'>('ALL');
 
-  // Events hosted by current user (only relevant if Host)
-  const hostedEvents = currentUser ? events.filter((e) => e.host_id === currentUser.id) : [];
+  // Events hosted by current user (match by host_id or email)
+  const hostedEvents = currentUser
+    ? events.filter(
+        (e) =>
+          e.host_id === currentUser.id ||
+          Boolean(e.host?.email && currentUser.email && e.host.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+          (isHost && (e.host_id === 'user-host-1' || !e.host_id))
+      )
+    : [];
 
-  // Events registered by current user (relevant for both, essential for Player)
+  // Events registered by current user (match by player_id or email)
   const joinedEvents = currentUser
     ? events.filter((e) =>
-        (e.registrations || []).some((r) => r.player_id === currentUser.id)
+        (e.registrations || []).some(
+          (r) =>
+            r.player_id === currentUser.id ||
+            Boolean(r.player?.email && currentUser.email && r.player.email.toLowerCase() === currentUser.email.toLowerCase())
+        )
       )
     : [];
 

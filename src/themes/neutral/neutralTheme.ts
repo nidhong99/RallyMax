@@ -102,7 +102,7 @@ export const neutralTheme = defineTheme({
 
   tokens: {
     '--color-background-surface': [neutral.light[100], neutral.dark[15]],
-    '--color-background-body': [neutral.light[95], neutral.dark[10]],
+    '--color-background-body': [neutral.light[100], neutral.dark[10]],
     '--color-background-card': [neutral.light[100], neutral.dark[10]],
     '--color-background-popover': [neutral.light[100], neutral.dark[10]],
     '--color-background-muted': [neutral.light[95], neutral.dark[10]],

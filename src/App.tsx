@@ -66,7 +66,16 @@ const MainLayout: React.FC = () => {
   return (
     <AppShell
       height="auto"
+      variant="surface"
       contentPadding={4}
+      style={{
+        minHeight: '100vh',
+        minHeight: '100dvh',
+        backgroundColor: 'var(--color-background-surface)',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
       topNav={
         <Navigation
           currentTab={currentTab}
@@ -85,6 +94,7 @@ const MainLayout: React.FC = () => {
           margin: '0 auto',
           paddingBottom: 'var(--spacing-8)',
           width: '100%',
+          flex: 1,
         }}
       >
         {currentTab === 'explorer' && (
