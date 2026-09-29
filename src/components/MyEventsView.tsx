@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
@@ -29,6 +29,11 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
 
   const [subTab, setSubTab] = useState<'hosting' | 'joining'>(() => (isHost ? 'hosting' : 'joining'));
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'CHECKED_IN' | 'CANCELLED'>('ALL');
+
+  // Automatically switch subTab when user logs in/out or switches roles
+  useEffect(() => {
+    setSubTab(isHost ? 'hosting' : 'joining');
+  }, [isHost, currentUser?.id]);
 
   // Events hosted by current user (match by host_id or email)
   const hostedEvents = currentUser

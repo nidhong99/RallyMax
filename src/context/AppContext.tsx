@@ -37,6 +37,17 @@ interface AppContextType {
   isRealSupabase: boolean;
 }
 
+const generateUuid = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -256,8 +267,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (data && !error) {
             setEvents(prev => {
               const map = new Map<string, Event>();
-              // Keep only local unsynced draft events that haven't been saved to DB yet
-              const pendingLocalEvents = prev.filter(e => e.id.startsWith('event-'));
+              const serverIds = new Set((data || []).map((d: any) => d.id));
+              // Keep local events that are not yet on server
+              const pendingLocalEvents = prev.filter(e => !serverIds.has(e.id));
               pendingLocalEvents.forEach(e => map.set(e.id, e));
 
               // Add live events from server (Server is single source of truth for synced events)
@@ -484,7 +496,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const finalName = name?.trim() || cleanEmail.split('@')[0];
     const isHost = cleanEmail === 'nidhong99@gmail.com';
     const newProfile: Profile = {
-      id: 'user-' + Date.now(),
+      id: generateUuid(),
       email: cleanEmail,
       full_name: finalName,
       avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
@@ -582,7 +594,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createCustomUser = (name: string, email: string): Profile => {
     const cleanEmail = email.trim().toLowerCase();
     const newUser: Profile = {
-      id: 'user-' + Date.now(),
+      id: generateUuid(),
       email: cleanEmail,
       full_name: name.trim() || cleanEmail.split('@')[0],
       avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -632,6 +644,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const isHost = currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com';
     if (!isHost) throw new Error('Chỉ tài khoản có vai trò Host mới được phép tạo kèo giao lưu');
 
+    const validHostId =
+      currentUser.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)
+        ? currentUser.id
+        : ((currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com' ? 'f4e7c76e-217a-46ed-8de8-daf349bbb020' : generateUuid());
+
+    const eventId = generateUuid();
     const venueName = eventData.venue_name || (eventData.venue_id ? venues.find(v => v.id === eventData.venue_id)?.name : 'Sân Cầu Lông');
     const fallbackVenue: Venue = {
       id: eventData.venue_id || 'custom-venue-' + Date.now(),
@@ -642,8 +660,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const newEvent: Event = {
-      id: 'event-' + Date.now(),
-      host_id: currentUser.id,
+      id: eventId,
+      host_id: validHostId,
       venue_id: eventData.venue_id || fallbackVenue.id,
       venue_name: venueName,
       location_url: eventData.location_url || '',
@@ -667,7 +685,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop&q=80',
       cover_image_position: eventData.cover_image_position || '50% 50%',
       venue: fallbackVenue,
-      host: currentUser,
+      host: { ...currentUser, id: validHostId },
       registrations: [],
     };
 
@@ -677,7 +695,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (supabase && currentUser) {
       try {
         const payload: any = {
-          host_id: currentUser.id,
+          id: eventId,
+          host_id: validHostId,
           venue_name: venueName,
           location_url: newEvent.location_url,
           court_numbers: newEvent.court_numbers,
@@ -768,27 +787,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const status: RegistrationStatus = targetEvent.requires_approval ? 'PENDING' : 'APPROVED';
 
+    const validPlayerId =
+      currentUser.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)
+        ? currentUser.id
+        : generateUuid();
+
+    const regId = generateUuid();
     const newReg: EventRegistration = {
-      id: 'reg-' + Date.now(),
+      id: regId,
       event_id: eventId,
-      player_id: currentUser.id,
+      player_id: validPlayerId,
       guest_count: guestCount,
       status,
       payment_status: 'UNPAID',
       registered_at: new Date().toISOString(),
-      player: currentUser,
+      player: { ...currentUser, id: validPlayerId },
     };
 
     setEvents(prev =>
       prev.map(ev => {
         if (ev.id !== eventId) return ev;
-        const currentRegs = (ev.registrations || []).filter(r => r.player_id !== currentUser.id);
+        const currentRegs = (ev.registrations || []).filter(r => r.player_id !== validPlayerId);
         return {
           ...ev,
           registrations: [...currentRegs, newReg],
         };
       })
     );
+
+    // Sync to Supabase Cloud
+    if (supabase && currentUser) {
+      try {
+        supabase
+          .from('event_registrations')
+          .insert([
+            {
+              id: regId,
+              event_id: eventId,
+              player_id: validPlayerId,
+              guest_count: guestCount,
+              status,
+              payment_status: 'UNPAID',
+            },
+          ])
+          .then(() => {}, (err) => console.warn('Supabase register error:', err));
+      } catch (e) {
+        console.warn('Supabase registerForEvent call error:', e);
+      }
+    }
 
     if (targetEvent.host_id !== currentUser.id) {
       setNotifications(prev => [
