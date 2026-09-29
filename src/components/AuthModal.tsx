@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
+import { Divider } from '@astryxdesign/core/Divider';
 import { useApp } from '../context/AppContext';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Mail, ArrowRight } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -11,9 +12,10 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { signInWithGoogle, signInWithFacebook } = useApp();
+  const { signInWithGoogle, signInWithFacebook, loginByEmail } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [emailInput, setEmailInput] = useState('');
 
   const handleOAuthGoogle = async () => {
     setIsLoading(true);
@@ -41,11 +43,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = emailInput.trim().toLowerCase();
+    if (!clean) {
+      setErrorMessage('Vui lòng nhập địa chỉ email.');
+      return;
+    }
+    if (!clean.includes('@') || !clean.includes('.')) {
+      setErrorMessage('Địa chỉ email không hợp lệ (ví dụ: name@gmail.com).');
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage('');
+    try {
+      const res = await loginByEmail(clean);
+      if (res.success) {
+        setEmailInput('');
+        onClose();
+      } else {
+        setErrorMessage(res.error || 'Đăng nhập không thành công.');
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Lỗi đăng nhập bằng email.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Dialog
       isOpen={isOpen}
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open) {
+          setErrorMessage('');
+          onClose();
+        }
       }}
       width={480}
       padding={4}
@@ -55,7 +89,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           title="Đăng nhập"
           subtitle="Kết nối sân cầu lông & cộng đồng đam mê thể thao"
           onOpenChange={(open) => {
-            if (!open) onClose();
+            if (!open) {
+              setErrorMessage('');
+              onClose();
+            }
           }}
         />
 
@@ -77,6 +114,76 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </HStack>
         )}
 
+        {/* 1. Direct Email Input Form */}
+        <form onSubmit={handleEmailSubmit} style={{ width: '100%' }}>
+          <VStack gap={2}>
+            <Text weight="medium" style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+              Đăng nhập bằng Email
+            </Text>
+            <HStack
+              gap={2}
+              style={{
+                alignItems: 'center',
+                padding: 'var(--spacing-2) var(--spacing-3)',
+                borderRadius: 'var(--radius-element)',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-background-surface)',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            >
+              <Mail size={18} style={{ color: 'var(--color-icon-tertiary)', flexShrink: 0 }} />
+              <input
+                type="email"
+                required
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="Nhập email của bạn (vd: nidhong99@gmail.com)..."
+                disabled={isLoading}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  width: '100%',
+                  fontSize: '14px',
+                  color: 'var(--color-text-primary)',
+                }}
+              />
+            </HStack>
+
+            <button
+              type="submit"
+              disabled={isLoading || !emailInput.trim()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 'var(--spacing-2)',
+                width: '100%',
+                padding: 'var(--spacing-3)',
+                borderRadius: 'var(--radius-element)',
+                border: 'none',
+                background: 'var(--color-primary-base, #10b981)',
+                color: '#ffffff',
+                cursor: isLoading || !emailInput.trim() ? 'not-allowed' : 'pointer',
+                fontWeight: 600,
+                fontSize: '15px',
+                opacity: isLoading || !emailInput.trim() ? 0.6 : 1,
+                transition: 'opacity 0.2s',
+              }}
+            >
+              <Text weight="semibold" style={{ color: '#ffffff' }}>
+                {isLoading ? 'Đang xử lý...' : 'Tiếp tục với Email'}
+              </Text>
+              <ArrowRight size={16} color="#ffffff" />
+            </button>
+          </VStack>
+        </form>
+
+        {/* 2. Divider */}
+        <Divider label="hoặc tiếp tục với" variant="subtle" />
+
+        {/* 3. OAuth Social Buttons */}
         <VStack gap={3}>
           {/* Google Button */}
           <button

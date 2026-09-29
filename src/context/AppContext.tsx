@@ -446,6 +446,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .maybeSingle();
 
         if (data && !error) {
+          const isHost = data.role === 'HOST' || cleanEmail === 'nidhong99@gmail.com';
           const profile: Profile = {
             id: data.id,
             email: data.email,
@@ -453,6 +454,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             avatar_url: data.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
             phone_number: data.phone_number || '',
             gender: data.gender || 'OTHER',
+            role: isHost ? 'HOST' : (data.role || 'PLAYER'),
+            is_verified_host: data.is_verified_host ?? isHost,
             skill_level: data.skill_level || 'BEGINNER',
             dominant_hand: data.dominant_hand || 'RIGHT',
             play_style: data.play_style || 'ALL_ROUND',
@@ -479,6 +482,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 4. Create new profile with this email
     const finalName = name?.trim() || cleanEmail.split('@')[0];
+    const isHost = cleanEmail === 'nidhong99@gmail.com';
     const newProfile: Profile = {
       id: 'user-' + Date.now(),
       email: cleanEmail,
@@ -486,6 +490,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       phone_number: '',
       gender: 'OTHER',
+      role: isHost ? 'HOST' : 'PLAYER',
+      is_verified_host: isHost,
       skill_level: 'BEGINNER',
       dominant_hand: 'RIGHT',
       play_style: 'ALL_ROUND',
