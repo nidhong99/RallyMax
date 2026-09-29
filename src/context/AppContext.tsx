@@ -7,8 +7,9 @@ interface AppContextType {
   currentUser: Profile | null;
   setCurrentUser: (user: Profile | null) => void;
   isLoggedIn: boolean;
-  activeRole: 'player' | 'host';
-  setActiveRole: (role: 'player' | 'host') => void;
+  isAdmin: boolean;
+  activeRole: 'player' | 'host' | 'admin';
+  setActiveRole: (role: 'player' | 'host' | 'admin') => void;
   login: (user: Profile) => void;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -31,6 +32,10 @@ interface AppContextType {
   checkInPlayer: (eventId: string, regId: string, isNoShow: boolean) => Promise<void>;
   markPaymentStatus: (eventId: string, regId: string, status: 'PAID' | 'UNPAID') => Promise<void>;
   createVenue: (venueData: Partial<Venue>) => Promise<Venue>;
+  updateVenue: (venueId: string, venueData: Partial<Venue>) => Promise<void>;
+  deleteVenue: (venueId: string) => Promise<void>;
+  updateUserRole: (userId: string, newRole: 'PLAYER' | 'HOST' | 'ADMIN', isVerifiedHost?: boolean) => Promise<void>;
+  resetUserReliability: (userId: string) => Promise<void>;
   updateProfile: (profileData: Partial<Profile>) => Promise<void>;
   addReview: (reviewData: Partial<Review>) => Promise<void>;
   markNotificationRead: (id: string) => void;
@@ -79,18 +84,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null; // Guest by default so "🔑 Đăng nhập" button appears on navbar
   });
 
-  const [activeRole, setActiveRole] = useState<'player' | 'host'>(() => {
+  const [activeRole, setActiveRole] = useState<'player' | 'host' | 'admin'>(() => {
     const saved = localStorage.getItem('rallymax_current_user');
     if (saved) {
       try {
         const u = JSON.parse(saved);
-        if (u && (u.role === 'HOST' || (u.email || '').toLowerCase() === 'nidhong99@gmail.com')) {
+        if (u && (u.role === 'ADMIN' || (u.email || '').toLowerCase() === 'nidhong99@gmail.com')) {
+          return 'admin';
+        }
+        if (u && u.role === 'HOST') {
           return 'host';
         }
       } catch (e) {}
     }
     return 'player';
   });
+
+  const isAdmin = currentUser?.role === 'ADMIN' || (currentUser?.email || '').toLowerCase() === 'nidhong99@gmail.com';
 
   const [venues, setVenues] = useState<Venue[]>(() => {
     const saved = localStorage.getItem('rallymax_venues');
@@ -363,8 +373,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const login = (user: Profile) => {
     const email = (user.email || '').toLowerCase();
-    const isHost = email === 'nidhong99@gmail.com' || (user.role === 'HOST' && email !== '75dangtheanh@gmail.com') || user.id === 'user-host-1';
-    const finalRole: 'HOST' | 'PLAYER' = isHost ? 'HOST' : 'PLAYER';
+    const isOwner = email === 'nidhong99@gmail.com';
+    const isDbAdmin = user.role === 'ADMIN';
+    const isAdminUser = isOwner || isDbAdmin;
+    const isHost = isAdminUser || (user.role === 'HOST' && email !== '75dangtheanh@gmail.com') || user.id === 'user-host-1';
+    const finalRole: 'ADMIN' | 'HOST' | 'PLAYER' = isAdminUser ? 'ADMIN' : (isHost ? 'HOST' : 'PLAYER');
     const profileToStore: Profile = {
       ...user,
       role: finalRole,
@@ -372,7 +385,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setCurrentUser(profileToStore);
-    setActiveRole(isHost ? 'host' : 'player');
+    setActiveRole(isAdminUser ? 'admin' : (isHost ? 'host' : 'player'));
     localStorage.setItem('rallymax_current_user_id', profileToStore.id);
     localStorage.setItem('rallymax_current_user', JSON.stringify(profileToStore));
 
@@ -933,17 +946,149 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const createVenue = async (venueData: Partial<Venue>): Promise<Venue> => {
+    const venueId = generateUuid();
     const newVenue: Venue = {
-      id: 'venue-' + Date.now(),
+      id: venueId,
       name: venueData.name || 'Sân Cầu Lông Mới',
       address: venueData.address || '',
       district_code: venueData.district_code || 'HN_BD',
       total_courts: venueData.total_courts || 4,
+      contact_phone: venueData.contact_phone,
+      maps_url: venueData.maps_url,
+      price_range: venueData.price_range,
       created_by: currentUser?.id,
       created_at: new Date().toISOString(),
     };
-    setVenues(prev => [newVenue, ...prev]);
+    setVenues(prev => {
+      const updated = [newVenue, ...prev];
+      localStorage.setItem('rallymax_venues', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('venues').insert([newVenue]);
+        if (error) console.warn('Supabase venue insert warning:', error.message);
+      } catch (err) {
+        console.warn('Supabase venue insert error:', err);
+      }
+    }
+
     return newVenue;
+  };
+
+  const updateVenue = async (venueId: string, venueData: Partial<Venue>) => {
+    setVenues(prev => {
+      const updated = prev.map(v => (v.id === venueId ? { ...v, ...venueData } : v));
+      localStorage.setItem('rallymax_venues', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('venues').update(venueData).eq('id', venueId);
+        if (error) console.warn('Supabase update venue warning:', error.message);
+      } catch (err) {
+        console.warn('Supabase update venue error:', err);
+      }
+    }
+  };
+
+  const deleteVenue = async (venueId: string) => {
+    setVenues(prev => {
+      const filtered = prev.filter(v => v.id !== venueId);
+      localStorage.setItem('rallymax_venues', JSON.stringify(filtered));
+      return filtered;
+    });
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('venues').delete().eq('id', venueId);
+        if (error) console.warn('Supabase delete venue warning:', error.message);
+      } catch (err) {
+        console.warn('Supabase delete venue error:', err);
+      }
+    }
+  };
+
+  const updateUserRole = async (userId: string, newRole: 'PLAYER' | 'HOST' | 'ADMIN', isVerifiedHost?: boolean) => {
+    const verified = isVerifiedHost !== undefined ? isVerifiedHost : (newRole === 'HOST' || newRole === 'ADMIN');
+
+    setAllUsers(prev => {
+      const updated = prev.map(u => {
+        if (u.id === userId) {
+          return {
+            ...u,
+            role: newRole,
+            is_verified_host: verified,
+          };
+        }
+        return u;
+      });
+      localStorage.setItem('rallymax_users', JSON.stringify(updated));
+      return updated;
+    });
+
+    setCurrentUser(current => {
+      if (current && current.id === userId) {
+        const updatedUser: Profile = {
+          ...current,
+          role: newRole,
+          is_verified_host: verified,
+        };
+        localStorage.setItem('rallymax_current_user', JSON.stringify(updatedUser));
+        setActiveRole(newRole === 'ADMIN' ? 'admin' : (newRole === 'HOST' ? 'host' : 'player'));
+        return updatedUser;
+      }
+      return current;
+    });
+
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ role: newRole, is_verified_host: verified, updated_at: new Date().toISOString() })
+          .eq('id', userId);
+        if (error) console.warn('Supabase update user role warning:', error.message);
+      } catch (err) {
+        console.warn('Supabase update user role error:', err);
+      }
+    }
+  };
+
+  const resetUserReliability = async (userId: string) => {
+    setAllUsers(prev => {
+      const updated = prev.map(u => {
+        if (u.id === userId) {
+          return {
+            ...u,
+            reliability_score: 100,
+            total_no_shows: 0,
+          };
+        }
+        return u;
+      });
+      localStorage.setItem('rallymax_users', JSON.stringify(updated));
+      return updated;
+    });
+
+    setCurrentUser(current => {
+      if (current && current.id === userId) {
+        const updated = { ...current, reliability_score: 100, total_no_shows: 0 };
+        localStorage.setItem('rallymax_current_user', JSON.stringify(updated));
+        return updated;
+      }
+      return current;
+    });
+
+    if (supabase) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ reliability_score: 100, total_no_shows: 0, updated_at: new Date().toISOString() })
+          .eq('id', userId);
+      } catch (e) {}
+    }
   };
 
   const updateProfile = async (profileData: Partial<Profile>) => {
@@ -982,6 +1127,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentUser,
         setCurrentUser,
         isLoggedIn: Boolean(currentUser),
+        isAdmin,
         activeRole,
         setActiveRole,
         login,
@@ -1006,6 +1152,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         checkInPlayer,
         markPaymentStatus,
         createVenue,
+        updateVenue,
+        deleteVenue,
+        updateUserRole,
+        resetUserReliability,
         updateProfile,
         addReview,
         markNotificationRead,

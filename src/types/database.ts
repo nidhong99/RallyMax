@@ -76,6 +76,9 @@ export interface Venue {
   latitude?: number;
   longitude?: number;
   total_courts: number;
+  contact_phone?: string;
+  maps_url?: string;
+  price_range?: string;
   created_by?: string;
   created_at?: string;
 }

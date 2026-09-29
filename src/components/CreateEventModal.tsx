@@ -23,7 +23,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { createEvent } = useApp();
+  const { createEvent, venues } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isSelectingFileRef = useRef(false);
   const resetSelectingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -504,10 +504,61 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     border: '1px solid var(--color-border)',
                   }}
                 >
-                  <HStack gap={1} style={{ alignItems: 'center' }}>
-                    <MapPin size={16} color="var(--color-icon-accent)" />
-                    <Text weight="semibold">Địa điểm sân thi đấu *</Text>
+                  <HStack gap={1} style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                    <HStack gap={1} style={{ alignItems: 'center' }}>
+                      <MapPin size={16} color="var(--color-icon-accent)" />
+                      <Text weight="semibold">Địa điểm sân thi đấu *</Text>
+                    </HStack>
+                    {venues && venues.length > 0 && (
+                      <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
+                        ⚡ Chọn từ database để tự động điền thông tin
+                      </Text>
+                    )}
                   </HStack>
+
+                  {/* Quick Select Venue from Database */}
+                  {venues && venues.length > 0 && (
+                    <VStack gap={1}>
+                      <Text type="supporting" weight="medium" style={{ fontSize: '12px' }}>
+                        🏟️ Chọn sân có sẵn trong cơ sở dữ liệu:
+                      </Text>
+                      <select
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (!val) return;
+                          const selected = venues.find(v => v.id === val);
+                          if (selected) {
+                            setVenueName(selected.name);
+                            if (selected.maps_url) {
+                              setLocationUrl(selected.maps_url);
+                            } else {
+                              setLocationUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.name + ' ' + (selected.address || ''))}`);
+                            }
+                            if (selected.total_courts) {
+                              setCourtNumbers(`Sân 1 (Tổng ${selected.total_courts} sân)`);
+                            }
+                          }
+                        }}
+                        defaultValue=""
+                        style={{
+                          padding: 'var(--spacing-2)',
+                          borderRadius: 'var(--radius-element)',
+                          border: '1px solid var(--color-border)',
+                          backgroundColor: 'var(--color-background-muted)',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                        }}
+                      >
+                        <option value="">-- Chọn nhanh sân trong database (hoặc nhập bên dưới) --</option>
+                        {venues.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            🏸 {v.name} ({v.district || 'Hà Nội'}) {v.price_range ? `· ${v.price_range}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </VStack>
+                  )}
 
                   <HStack gap={2} style={{ width: '100%' }}>
                     <VStack gap={1} style={{ flex: 2 }}>

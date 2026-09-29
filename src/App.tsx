@@ -7,6 +7,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Navigation } from './components/Navigation';
 import { EventExplorer } from './components/EventExplorer';
 import { MyEventsView } from './components/MyEventsView';
+import { AdminDashboardView } from './components/AdminDashboardView';
 import { EventDetailModal } from './components/EventDetailModal';
 import { CreateEventModal } from './components/CreateEventModal';
 import { ProfileModal } from './components/ProfileModal';
@@ -16,9 +17,9 @@ import { AuthModal } from './components/AuthModal';
 import { Event } from './types/database';
 
 const MainLayout: React.FC = () => {
-  const { currentUser, events } = useApp();
+  const { currentUser, events, isAdmin } = useApp();
 
-  const [currentTab, setCurrentTab] = useState<'explorer' | 'my-events'>('explorer');
+  const [currentTab, setCurrentTab] = useState<'explorer' | 'my-events' | 'admin-dashboard'>('explorer');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -58,9 +59,9 @@ const MainLayout: React.FC = () => {
       setIsAuthOpen(true);
       return;
     }
-    const isHost = currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com';
+    const isHost = isAdmin || currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com';
     if (!isHost) {
-      alert('Tài khoản của bạn là Player. Chỉ Host mới có quyền tạo kèo giao lưu.');
+      alert('Tài khoản của bạn là Player. Chỉ Host hoặc Admin mới có quyền tạo kèo giao lưu.');
       return;
     }
     setIsCreateOpen(true);
@@ -121,6 +122,13 @@ const MainLayout: React.FC = () => {
             onOpenCreateEvent={handleOpenCreateEvent}
             onExplore={() => setCurrentTab('explorer')}
             onOpenReview={handleOpenReview}
+          />
+        )}
+
+        {currentTab === 'admin-dashboard' && (
+          <AdminDashboardView
+            onSelectEvent={handleSelectEvent}
+            onOpenCreateEvent={handleOpenCreateEvent}
           />
         )}
       </VStack>

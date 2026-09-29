@@ -6,12 +6,12 @@ import { Text } from '@astryxdesign/core/Text';
 import { DropdownMenu } from '@astryxdesign/core/DropdownMenu';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Badge } from '@astryxdesign/core/Badge';
-import { User, LogOut, Shield } from 'lucide-react';
+import { User, LogOut, Shield, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 interface NavigationProps {
-  currentTab: 'explorer' | 'my-events';
-  onSelectTab: (tab: 'explorer' | 'my-events') => void;
+  currentTab: 'explorer' | 'my-events' | 'admin-dashboard';
+  onSelectTab: (tab: 'explorer' | 'my-events' | 'admin-dashboard') => void;
   onOpenCreateEvent: () => void;
   onOpenProfile: () => void;
   onOpenSupabaseGuide: () => void;
@@ -26,8 +26,8 @@ export const Navigation: React.FC<NavigationProps> = ({
   onOpenSupabaseGuide,
   onOpenAuth,
 }) => {
-  const { currentUser, isLoggedIn, logout, isRealSupabase } = useApp();
-  const isHost = currentUser?.role === 'HOST' || (currentUser?.email || '').toLowerCase() === 'nidhong99@gmail.com';
+  const { currentUser, isLoggedIn, logout, isRealSupabase, isAdmin } = useApp();
+  const isHost = isAdmin || currentUser?.role === 'HOST' || (currentUser?.email || '').toLowerCase() === 'nidhong99@gmail.com';
 
   return (
     <TopNav
@@ -64,11 +64,18 @@ export const Navigation: React.FC<NavigationProps> = ({
             isSelected={currentTab === 'my-events'}
             onClick={() => onSelectTab('my-events')}
           />
+          {isAdmin && (
+            <TopNavItem
+              label="🛡️ Quản trị (Admin)"
+              isSelected={currentTab === 'admin-dashboard'}
+              onClick={() => onSelectTab('admin-dashboard')}
+            />
+          )}
         </HStack>
       }
       endContent={
         <HStack gap={2} style={{ alignItems: 'center' }}>
-          {/* Quick Create Event only for Host */}
+          {/* Quick Create Event only for Host & Admin */}
           {isLoggedIn && isHost && (
             <Button
               variant="primary"
@@ -77,7 +84,6 @@ export const Navigation: React.FC<NavigationProps> = ({
               onClick={onOpenCreateEvent}
             />
           )}
-
 
           {/* Supabase Status Button */}
           <Button
@@ -105,12 +111,16 @@ export const Navigation: React.FC<NavigationProps> = ({
                     </Text>
                     <Badge
                       variant={
-                        (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
+                        isAdmin
+                          ? 'purple'
+                          : (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
                           ? 'purple'
                           : 'blue'
                       }
                       label={
-                        (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
+                        isAdmin
+                          ? '🛡️ Admin'
+                          : (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
                           ? '👑 Host'
                           : '🏸 Player'
                       }
@@ -137,11 +147,26 @@ export const Navigation: React.FC<NavigationProps> = ({
                       </Text>
                     </VStack>
                   ),
-                  description: (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
+                  description: isAdmin
+                    ? '🛡️ Quản trị viên tối cao (Toàn quyền hệ thống)'
+                    : (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
                     ? '👑 Vai trò Host (Tổ chức kèo)'
                     : '🏸 Vai trò Player (Tham gia kèo)',
                   icon: <Shield size={16} color="var(--color-icon-accent)" />,
                 },
+                ...(isAdmin
+                  ? [
+                      {
+                        type: 'divider' as const,
+                      },
+                      {
+                        label: 'Bảng Quản Trị Hệ Thống',
+                        description: 'Quản lý DB Sân, User & Kèo',
+                        icon: <ShieldCheck size={16} color="var(--color-icon-accent)" />,
+                        onClick: () => onSelectTab('admin-dashboard'),
+                      },
+                    ]
+                  : []),
                 {
                   type: 'divider',
                 },
