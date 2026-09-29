@@ -256,9 +256,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (data && !error) {
             setEvents(prev => {
               const map = new Map<string, Event>();
-              // Keep any existing pending local events
-              prev.forEach(e => map.set(e.id, e));
-              // Merge live server events
+              // Keep only local unsynced draft events that haven't been saved to DB yet
+              const pendingLocalEvents = prev.filter(e => e.id.startsWith('event-'));
+              pendingLocalEvents.forEach(e => map.set(e.id, e));
+
+              // Add live events from server (Server is single source of truth for synced events)
               data.forEach((ev: any) => {
                 map.set(ev.id, {
                   ...ev,
@@ -273,6 +275,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   registrations: ev.registrations || [],
                 });
               });
+
               const merged = Array.from(map.values());
               localStorage.setItem('rallymax_events', JSON.stringify(merged));
               return merged;
@@ -285,12 +288,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     fetchCloudEvents();
 
-    // 5. Realtime listener: whenever any Host creates an event, all users update instantly
+    // 5. Realtime listener: instant sync on INSERT, UPDATE, DELETE for all users
     const eventsChannel = supabase
       .channel('public:events_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-        fetchCloudEvents();
-      })
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'events' },
+        (payload: any) => {
+          // If a DELETE event is received, immediately evict it from local state
+          if (payload.eventType === 'DELETE' && payload.old?.id) {
+            const deletedId = payload.old.id;
+            setEvents(prev => {
+              const filtered = prev.filter(e => e.id !== deletedId);
+              localStorage.setItem('rallymax_events', JSON.stringify(filtered));
+              return filtered;
+            });
+          }
+          // Fetch updated list from cloud
+          fetchCloudEvents();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -717,13 +734,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteEvent = async (eventId: string) => {
+    // 1. Immediately remove from local state
     setEvents(prev => {
       const next = prev.filter(e => e.id !== eventId);
       localStorage.setItem('rallymax_events', JSON.stringify(next));
       return next;
     });
+
+    // 2. Delete on Supabase Cloud so all other connected devices update in realtime
     if (supabase) {
-      supabase.from('events').delete().eq('id', eventId).then(() => {}, () => {});
+      try {
+        const { error } = await supabase.from('events').delete().eq('id', eventId);
+        if (error) {
+          console.warn('Supabase delete event error:', error.message);
+        }
+      } catch (err) {
+        console.warn('Supabase delete event call error:', err);
+      }
     }
   };
 

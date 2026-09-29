@@ -16,7 +16,7 @@ import { AuthModal } from './components/AuthModal';
 import { Event } from './types/database';
 
 const MainLayout: React.FC = () => {
-  const { currentUser } = useApp();
+  const { currentUser, events } = useApp();
 
   const [currentTab, setCurrentTab] = useState<'explorer' | 'my-events'>('explorer');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -27,6 +27,17 @@ const MainLayout: React.FC = () => {
   const [reviewTargetEvent, setReviewTargetEvent] = useState<Event | null>(null);
   const [isSupabaseGuideOpen, setIsSupabaseGuideOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+  // Realtime safety: If the currently viewed event is deleted by its Host, close the modal immediately
+  React.useEffect(() => {
+    if (isDetailOpen && selectedEvent) {
+      const stillExists = events.some((e) => e.id === selectedEvent.id);
+      if (!stillExists) {
+        setIsDetailOpen(false);
+        setSelectedEvent(null);
+      }
+    }
+  }, [events, selectedEvent, isDetailOpen]);
 
   const handleSelectEvent = (event: Event) => {
     setSelectedEvent(event);
