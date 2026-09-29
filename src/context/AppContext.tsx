@@ -246,8 +246,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
+    // 4. Fetch live events from Supabase Cloud Database for ALL users across all devices
+    const fetchCloudEvents = () => {
+      supabase
+        .from('events')
+        .select('*, host:profiles(*), venue:venues(*), registrations:event_registrations(*, player:profiles(*))')
+        .order('created_at', { ascending: false })
+        .then(({ data, error }) => {
+          if (data && !error) {
+            setEvents(prev => {
+              const map = new Map<string, Event>();
+              // Keep any existing pending local events
+              prev.forEach(e => map.set(e.id, e));
+              // Merge live server events
+              data.forEach((ev: any) => {
+                map.set(ev.id, {
+                  ...ev,
+                  venue: ev.venue || {
+                    id: ev.venue_id || 'v-default',
+                    name: ev.venue_name || 'Sân cầu lông',
+                    address: ev.location_url || 'Đang cập nhật địa chỉ',
+                    district_code: 'HN_BD',
+                    total_courts: 4,
+                  },
+                  host: ev.host,
+                  registrations: ev.registrations || [],
+                });
+              });
+              const merged = Array.from(map.values());
+              localStorage.setItem('rallymax_events', JSON.stringify(merged));
+              return merged;
+            });
+          }
+        }, err => {
+          console.warn('Supabase fetch events error:', err);
+        });
+    };
+
+    fetchCloudEvents();
+
+    // 5. Realtime listener: whenever any Host creates an event, all users update instantly
+    const eventsChannel = supabase
+      .channel('public:events_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        fetchCloudEvents();
+      })
+      .subscribe();
+
     return () => {
       subscription?.unsubscribe();
+      supabase.removeChannel(eventsChannel);
     };
   }, []);
 
@@ -440,12 +488,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true, user: newProfile };
   };
 
+  const getRedirectUrl = () => {
+    return window.location.href.split('#')[0].split('?')[0];
+  };
+
   const signInWithGoogle = async () => {
     if (supabase) {
       try {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
-          options: { redirectTo: window.location.origin },
+          options: { redirectTo: getRedirectUrl() },
         });
         if (error) throw error;
         return;
@@ -477,7 +529,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'facebook',
-          options: { redirectTo: window.location.origin },
+          options: { redirectTo: getRedirectUrl() },
         });
         if (error) throw error;
         return;
@@ -597,6 +649,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setEvents(prev => [newEvent, ...prev]);
+
+    // Push to Supabase Cloud so ALL devices and users receive it
+    if (supabase && currentUser) {
+      try {
+        const payload: any = {
+          host_id: currentUser.id,
+          venue_name: venueName,
+          location_url: newEvent.location_url,
+          court_numbers: newEvent.court_numbers,
+          title: newEvent.title,
+          description: newEvent.description,
+          start_time: newEvent.start_time,
+          end_time: newEvent.end_time,
+          fee_per_player: newEvent.fee_per_player,
+          payment_qr_url: newEvent.payment_qr_url,
+          payment_note: newEvent.payment_note,
+          max_players: newEvent.max_players,
+          min_players: newEvent.min_players,
+          min_skill_level: newEvent.min_skill_level,
+          max_skill_level: newEvent.max_skill_level,
+          requires_approval: newEvent.requires_approval,
+          status: 'OPEN',
+        };
+        if (newEvent.venue_id && newEvent.venue_id.includes('-') && !newEvent.venue_id.startsWith('custom-')) {
+          payload.venue_id = newEvent.venue_id;
+        }
+        supabase
+          .from('events')
+          .insert([payload])
+          .select('*, host:profiles(*), venue:venues(*)')
+          .single()
+          .then(({ data, error }) => {
+            if (data && !error) {
+              setEvents(prev =>
+                prev.map(e => (e.id === newEvent.id ? { ...e, id: data.id, ...data, host: currentUser, venue: fallbackVenue } : e))
+              );
+            } else if (error) {
+              console.warn('Supabase insert event warning:', error.message);
+            }
+          });
+      } catch (err) {
+        console.warn('Supabase createEvent call error:', err);
+      }
+    }
+
     return newEvent;
   };
 
