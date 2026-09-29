@@ -38,6 +38,7 @@ interface AppContextType {
   resetUserReliability: (userId: string) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   purgeMockUsers: () => void;
+  refreshProfiles: () => Promise<void>;
   updateProfile: (profileData: Partial<Profile>) => Promise<void>;
   addReview: (reviewData: Partial<Review>) => Promise<void>;
   markNotificationRead: (id: string) => void;
@@ -230,7 +231,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const validProfiles = data
             .filter((p: any) => !isMockEmail(p.email) && !isMockId(p.id))
             .map((p: any) => {
-              const isHost = p.role === 'HOST' || (p.email || '').toLowerCase() === 'nidhong99@gmail.com';
+              const roleFromDb: 'PLAYER' | 'HOST' | 'ADMIN' =
+                (p.role === 'ADMIN' || p.role === 'HOST' || p.role === 'PLAYER')
+                  ? p.role
+                  : ((p.email || '').toLowerCase() === 'nidhong99@gmail.com' ? 'ADMIN' : 'PLAYER');
               return {
                 id: p.id,
                 email: p.email || '',
@@ -238,8 +242,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 avatar_url: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
                 phone_number: p.phone_number || '',
                 gender: p.gender || 'OTHER',
-                role: isHost ? 'HOST' : (p.role || 'PLAYER'),
-                is_verified_host: p.is_verified_host ?? isHost,
+                role: roleFromDb,
+                is_verified_host: p.is_verified_host ?? (roleFromDb === 'HOST' || roleFromDb === 'ADMIN'),
                 skill_level: p.skill_level || 'BEGINNER',
                 dominant_hand: p.dominant_hand || 'RIGHT',
                 play_style: p.play_style || 'ALL_ROUND',
@@ -259,15 +263,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (!current) return null;
           const freshData = data.find((p: any) => p.id === current.id || p.email?.toLowerCase() === current.email?.toLowerCase());
           if (freshData) {
-            const isHost = freshData.role === 'HOST' || (freshData.email || '').toLowerCase() === 'nidhong99@gmail.com';
+            const roleFromDb: 'PLAYER' | 'HOST' | 'ADMIN' =
+              (freshData.role === 'ADMIN' || freshData.role === 'HOST' || freshData.role === 'PLAYER')
+                ? freshData.role
+                : ((freshData.email || '').toLowerCase() === 'nidhong99@gmail.com' ? 'ADMIN' : 'PLAYER');
             const updated: Profile = {
               ...current,
-              role: isHost ? 'HOST' : (freshData.role || 'PLAYER'),
-              is_verified_host: freshData.is_verified_host ?? isHost,
+              role: roleFromDb,
+              is_verified_host: freshData.is_verified_host ?? (roleFromDb === 'HOST' || roleFromDb === 'ADMIN'),
               full_name: freshData.full_name || current.full_name,
             };
             localStorage.setItem('rallymax_current_user', JSON.stringify(updated));
-            setActiveRole(isHost ? 'host' : 'player');
+            setActiveRole(roleFromDb === 'ADMIN' ? 'admin' : (roleFromDb === 'HOST' ? 'host' : 'player'));
             return updated;
           }
           return current;
@@ -497,7 +504,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .maybeSingle();
 
         if (data && !error) {
-          const isHost = data.role === 'HOST' || cleanEmail === 'nidhong99@gmail.com';
+          const effectiveRole: 'PLAYER' | 'HOST' | 'ADMIN' =
+            (data.role === 'ADMIN' || data.role === 'HOST' || data.role === 'PLAYER')
+              ? data.role
+              : (cleanEmail === 'nidhong99@gmail.com' ? 'ADMIN' : 'PLAYER');
           const profile: Profile = {
             id: data.id,
             email: data.email,
@@ -505,8 +515,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             avatar_url: data.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
             phone_number: data.phone_number || '',
             gender: data.gender || 'OTHER',
-            role: isHost ? 'HOST' : (data.role || 'PLAYER'),
-            is_verified_host: data.is_verified_host ?? isHost,
+            role: effectiveRole,
+            is_verified_host: data.is_verified_host ?? (effectiveRole === 'HOST' || effectiveRole === 'ADMIN'),
             skill_level: data.skill_level || 'BEGINNER',
             dominant_hand: data.dominant_hand || 'RIGHT',
             play_style: data.play_style || 'ALL_ROUND',
@@ -1148,6 +1158,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const refreshProfiles = async () => {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (data && data.length > 0 && !error) {
+        const validProfiles = data
+          .filter((p: any) => !isMockEmail(p.email) && !isMockId(p.id))
+          .map((p: any) => {
+            const roleFromDb: 'PLAYER' | 'HOST' | 'ADMIN' =
+              (p.role === 'ADMIN' || p.role === 'HOST' || p.role === 'PLAYER')
+                ? p.role
+                : ((p.email || '').toLowerCase() === 'nidhong99@gmail.com' ? 'ADMIN' : 'PLAYER');
+            return {
+              id: p.id,
+              email: p.email || '',
+              full_name: p.full_name || p.email?.split('@')[0] || 'Vận động viên',
+              avatar_url: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+              phone_number: p.phone_number || '',
+              gender: p.gender || 'OTHER',
+              role: roleFromDb,
+              is_verified_host: p.is_verified_host ?? (roleFromDb === 'HOST' || roleFromDb === 'ADMIN'),
+              skill_level: p.skill_level || 'BEGINNER',
+              dominant_hand: p.dominant_hand || 'RIGHT',
+              play_style: p.play_style || 'ALL_ROUND',
+              district_code: p.district_code || 'HN_BD',
+              reliability_score: p.reliability_score ?? 100,
+              total_matches_played: p.total_matches_played ?? 0,
+              total_no_shows: p.total_no_shows ?? 0,
+              created_at: p.created_at || new Date().toISOString(),
+            };
+          });
+        setAllUsers(validProfiles);
+        localStorage.setItem('rallymax_users', JSON.stringify(validProfiles));
+
+        setCurrentUser(current => {
+          if (!current) return null;
+          const freshData = data.find((p: any) => p.id === current.id || p.email?.toLowerCase() === current.email?.toLowerCase());
+          if (freshData) {
+            const roleFromDb: 'PLAYER' | 'HOST' | 'ADMIN' =
+              (freshData.role === 'ADMIN' || freshData.role === 'HOST' || freshData.role === 'PLAYER')
+                ? freshData.role
+                : ((freshData.email || '').toLowerCase() === 'nidhong99@gmail.com' ? 'ADMIN' : 'PLAYER');
+            const updated: Profile = {
+              ...current,
+              role: roleFromDb,
+              is_verified_host: freshData.is_verified_host ?? (roleFromDb === 'HOST' || roleFromDb === 'ADMIN'),
+              full_name: freshData.full_name || current.full_name,
+            };
+            localStorage.setItem('rallymax_current_user', JSON.stringify(updated));
+            setActiveRole(roleFromDb === 'ADMIN' ? 'admin' : (roleFromDb === 'HOST' ? 'host' : 'player'));
+            return updated;
+          }
+          return current;
+        });
+      }
+    } catch (err) {
+      console.warn('refreshProfiles error:', err);
+    }
+  };
+
   const updateProfile = async (profileData: Partial<Profile>) => {
     if (!currentUser) return;
     const updated = { ...currentUser, ...profileData, updated_at: new Date().toISOString() };
@@ -1215,6 +1285,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resetUserReliability,
         deleteUser,
         purgeMockUsers,
+        refreshProfiles,
         updateProfile,
         addReview,
         markNotificationRead,

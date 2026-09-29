@@ -53,6 +53,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     updateUserRole,
     resetUserReliability,
     deleteUser,
+    refreshProfiles,
     cancelEvent,
     deleteEvent,
     isRealSupabase,
@@ -596,6 +597,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <option value="HOST">👑 Host</option>
                 <option value="PLAYER">🏸 Player</option>
               </select>
+
+              <Button
+                size="sm"
+                variant="secondary"
+                label="🔄 Đồng bộ từ Supabase"
+                onClick={async () => {
+                  await refreshProfiles();
+                  showSuccess('Đã đồng bộ vai trò mới nhất từ cơ sở dữ liệu Supabase!');
+                }}
+              />
             </HStack>
           </HStack>
 
@@ -616,7 +627,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <tbody>
                 {filteredUsers.map((u) => {
                   const isCurrentAdmin = (u.email || '').toLowerCase() === 'nidhong99@gmail.com';
-                  const effectiveRole: UserRole = isCurrentAdmin ? 'ADMIN' : (u.role || 'PLAYER');
+                  const displayRole: UserRole = u.role || (isCurrentAdmin ? 'ADMIN' : 'PLAYER');
                   const score = u.reliability_score ?? 100;
                   const isLowScore = score < 90;
 
@@ -645,13 +656,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         {/* Interactive Role Switcher Dropdown */}
                         <select
-                          value={effectiveRole}
-                          disabled={isCurrentAdmin && currentUser?.id === u.id}
+                          value={displayRole}
                           onChange={async (e) => {
                             const newRole = e.target.value as UserRole;
                             try {
                               await updateUserRole(u.id, newRole, u.is_verified_host);
-                              showSuccess(`Đã cập nhật vai trò của ${u.full_name || u.email} thành ${newRole}!`);
+                              showSuccess(`Đã lưu vai trò ${newRole} cho ${u.full_name || u.email}!`);
                             } catch (err) {
                               alert('Lỗi cập nhật quyền: ' + (err as Error).message);
                             }
@@ -661,9 +671,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                             borderRadius: 'var(--radius-element)',
                             border: '1px solid var(--color-border)',
                             backgroundColor:
-                              effectiveRole === 'ADMIN'
+                              displayRole === 'ADMIN'
                                 ? 'rgba(99, 102, 241, 0.1)'
-                                : effectiveRole === 'HOST'
+                                : displayRole === 'HOST'
                                 ? 'rgba(234, 179, 8, 0.1)'
                                 : 'var(--color-background-surface)',
                             fontWeight: 600,

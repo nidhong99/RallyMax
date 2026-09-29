@@ -46,6 +46,8 @@ export interface District {
   name: string;
 }
 
+export type UserRole = 'PLAYER' | 'HOST' | 'ADMIN';
+
 export interface Profile {
   id: string;
   email: string;
@@ -59,7 +61,7 @@ export interface Profile {
   play_style: PlayStyle;
   bio?: string;
   district_code?: string;
-  role?: 'HOST' | 'PLAYER' | 'ADMIN';
+  role?: UserRole;
   is_verified_host?: boolean;
   reliability_score: number; // 0 - 100%
   total_matches_played: number;
