@@ -4,6 +4,7 @@ import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { Divider } from '@astryxdesign/core/Divider';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { AlertCircle, Mail, ArrowRight } from 'lucide-react';
 
 interface AuthModalProps {
@@ -13,6 +14,7 @@ interface AuthModalProps {
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { signInWithGoogle, signInWithFacebook, loginByEmail } = useApp();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [emailInput, setEmailInput] = useState('');
@@ -24,7 +26,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       await signInWithGoogle();
       onClose();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Lỗi đăng nhập Google.');
+      setErrorMessage(err.message || t('auth.googleError'));
     } finally {
       setIsLoading(false);
     }
@@ -37,7 +39,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       await signInWithFacebook();
       onClose();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Lỗi đăng nhập Facebook.');
+      setErrorMessage(err.message || t('auth.facebookError'));
     } finally {
       setIsLoading(false);
     }
@@ -47,11 +49,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
     const clean = emailInput.trim().toLowerCase();
     if (!clean) {
-      setErrorMessage('Vui lòng nhập địa chỉ email.');
+      setErrorMessage(t('auth.emailRequired'));
       return;
     }
     if (!clean.includes('@') || !clean.includes('.')) {
-      setErrorMessage('Địa chỉ email không hợp lệ (ví dụ: name@gmail.com).');
+      setErrorMessage(t('auth.emailInvalid'));
       return;
     }
 
@@ -63,10 +65,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         setEmailInput('');
         onClose();
       } else {
-        setErrorMessage(res.error || 'Đăng nhập không thành công.');
+        setErrorMessage(res.error || t('auth.failed'));
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Lỗi đăng nhập bằng email.');
+      setErrorMessage(err.message || t('auth.emailError'));
     } finally {
       setIsLoading(false);
     }
@@ -86,8 +88,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     >
       <VStack gap={4}>
         <DialogHeader
-          title="Đăng nhập"
-          subtitle="Kết nối sân cầu lông & cộng đồng đam mê thể thao"
+          title={t('auth.title')}
+          subtitle={t('auth.subtitle')}
           onOpenChange={(open) => {
             if (!open) {
               setErrorMessage('');
@@ -118,7 +120,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         <form onSubmit={handleEmailSubmit} style={{ width: '100%' }}>
           <VStack gap={2}>
             <Text weight="medium" style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-              Đăng nhập bằng Email
+              {t('auth.emailSection')}
             </Text>
             <HStack
               gap={2}
@@ -138,7 +140,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 required
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                placeholder="Nhập email của bạn (vd: nidhong99@gmail.com)..."
+                placeholder={t('auth.emailPlaceholder')}
                 disabled={isLoading}
                 style={{
                   border: 'none',
@@ -173,7 +175,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               }}
             >
               <Text weight="semibold" style={{ color: '#ffffff' }}>
-                {isLoading ? 'Đang xử lý...' : 'Tiếp tục với Email'}
+                {isLoading ? t('auth.processing') : t('auth.emailContinue')}
               </Text>
               <ArrowRight size={16} color="#ffffff" />
             </button>
@@ -181,7 +183,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </form>
 
         {/* 2. Divider */}
-        <Divider label="hoặc tiếp tục với" variant="subtle" />
+        <Divider label={t('auth.orContinueWith')} variant="subtle" />
 
         {/* 3. OAuth Social Buttons */}
         <VStack gap={3}>
@@ -224,7 +226,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
               />
             </svg>
-            <Text weight="semibold">Tiếp tục bằng tài khoản Google (Gmail)</Text>
+            <Text weight="semibold">{t('auth.google')}</Text>
           </button>
 
           {/* Facebook Button */}
@@ -252,7 +254,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <svg width="20" height="20" fill="#ffffff" viewBox="0 0 24 24">
               <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
             </svg>
-            <Text weight="semibold" style={{ color: '#ffffff' }}>Tiếp tục bằng tài khoản Facebook</Text>
+            <Text weight="semibold" style={{ color: '#ffffff' }}>{t('auth.facebook')}</Text>
           </button>
         </VStack>
       </VStack>

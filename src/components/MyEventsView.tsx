@@ -7,6 +7,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '@astryxdesign/core/Table';
 import { Event } from '../types/database';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface MyEventsViewProps {
   onSelectEvent: (event: Event) => void;
@@ -22,6 +23,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
   onOpenReview,
 }) => {
   const { events, currentUser, cancelRegistration } = useApp();
+  const { t, language, formatCurrency } = useLanguage();
 
   const isHost =
     currentUser?.role === 'HOST' ||
@@ -87,14 +89,16 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
   ).length;
 
   const handleCancel = async (ev: Event) => {
-    if (window.confirm(`Bạn có chắc chắn muốn hủy đăng ký kèo "${ev.title}" không?`)) {
-      await cancelRegistration(ev.id, 'Người chơi chủ động hủy đăng ký');
+    const confirmMsg = language === 'vi'
+      ? `Bạn có chắc chắn muốn hủy đăng ký kèo "${ev.title}" không?`
+      : `Are you sure you want to cancel your registration for "${ev.title}"?`;
+    const reasonMsg = language === 'vi' ? 'Người chơi chủ động hủy đăng ký' : 'Player cancelled registration';
+    if (window.confirm(confirmMsg)) {
+      await cancelRegistration(ev.id, reasonMsg);
     }
   };
 
-  const formatFee = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-  };
+  const dateLocale = language === 'vi' ? 'vi-VN' : 'en-US';
 
   return (
     <VStack gap={4} style={{ width: '100%' }}>
@@ -102,12 +106,16 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
       <HStack gap={2} style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
         <VStack gap={0}>
           <Heading level={2}>
-            {isHost ? 'Kèo Của Tôi' : 'Kèo Bạn Tham Gia'}
+            {isHost ? t('myEvents.title') : (language === 'vi' ? 'Kèo Bạn Tham Gia' : 'Sessions You Joined')}
           </Heading>
           <Text color="secondary">
             {isHost
-              ? 'Quản lý các buổi chơi do bạn tổ chức và theo dõi kèo tham gia'
-              : 'Theo dõi lịch thi đấu, trạng thái duyệt đơn và quản lý các buổi chơi của bạn'}
+              ? (language === 'vi'
+                  ? 'Quản lý các buổi chơi do bạn tổ chức và theo dõi kèo tham gia'
+                  : 'Manage your hosted badminton sessions and track joined games')
+              : (language === 'vi'
+                  ? 'Theo dõi lịch thi đấu, trạng thái duyệt đơn và quản lý các buổi chơi của bạn'
+                  : 'Track your match schedule, application status, and check-ins')}
           </Text>
         </VStack>
 
@@ -117,13 +125,13 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
             <Button
               size="md"
               variant={subTab === 'hosting' ? 'primary' : 'secondary'}
-              label={`👑 Kèo tôi tổ chức (${hostedEvents.length})`}
+              label={`👑 ${t('myEvents.tabHosted')} (${hostedEvents.length})`}
               onClick={() => setSubTab('hosting')}
             />
             <Button
               size="md"
               variant={subTab === 'joining' ? 'primary' : 'secondary'}
-              label={`🏸 Kèo tôi tham gia (${joinedEvents.length})`}
+              label={`🏸 ${t('myEvents.tabJoined')} (${joinedEvents.length})`}
               onClick={() => setSubTab('joining')}
             />
           </HStack>
@@ -144,12 +152,12 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                 border: '1px solid var(--color-border)',
               }}
             >
-              <Text type="large" weight="semibold">Bạn chưa tổ chức kèo cầu lông nào</Text>
-              <Text color="secondary">Hãy tạo kèo mới để kết nối các vận động viên tham gia giao lưu!</Text>
+              <Text type="large" weight="semibold">{t('myEvents.noHosted')}</Text>
+              <Text color="secondary">{t('myEvents.noHostedDesc')}</Text>
               <Button
                 variant="primary"
                 size="md"
-                label="+ Tạo Kèo Mới Ngay"
+                label={`+ ${t('explorer.createNow')}`}
                 onClick={onOpenCreateEvent}
               />
             </VStack>
@@ -157,11 +165,11 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHeaderCell>Tên buổi chơi & Thời gian</TableHeaderCell>
-                  <TableHeaderCell>Sân & Địa chỉ</TableHeaderCell>
-                  <TableHeaderCell>Người đăng ký</TableHeaderCell>
-                  <TableHeaderCell>Trạng thái</TableHeaderCell>
-                  <TableHeaderCell>Thao tác</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Tên buổi chơi & Thời gian' : 'Session & Time'}</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Sân & Địa chỉ' : 'Venue & Address'}</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Người đăng ký' : 'Registrations'}</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Trạng thái' : 'Status'}</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Thao tác' : 'Actions'}</TableHeaderCell>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -171,7 +179,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                   const evApprovedCount = regs.filter((r) => r.status === 'APPROVED' || r.status === 'CHECKED_IN').length;
 
                   const startDate = new Date(ev.start_time);
-                  const timeDisplay = `${startDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })} • ${startDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+                  const timeDisplay = `${startDate.toLocaleDateString(dateLocale, { day: '2-digit', month: '2-digit' })} • ${startDate.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })}`;
 
                   return (
                     <TableRow key={ev.id}>
@@ -195,7 +203,10 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                             {evApprovedCount}/{ev.max_players}
                           </Text>
                           {evPendingCount > 0 && (
-                            <Badge variant="yellow" label={`${evPendingCount} chờ duyệt`} />
+                            <Badge
+                              variant="yellow"
+                              label={language === 'vi' ? `${evPendingCount} chờ duyệt` : `${evPendingCount} pending`}
+                            />
                           )}
                         </HStack>
                       </TableCell>
@@ -203,7 +214,13 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                       <TableCell>
                         <Badge
                           variant={ev.status === 'OPEN' ? 'green' : ev.status === 'CANCELLED' ? 'red' : 'neutral'}
-                          label={ev.status === 'OPEN' ? 'Đang mở' : ev.status === 'CANCELLED' ? 'Đã hủy' : 'Hoàn thành'}
+                          label={
+                            ev.status === 'OPEN'
+                              ? (language === 'vi' ? 'Đang mở' : 'Open')
+                              : ev.status === 'CANCELLED'
+                              ? (language === 'vi' ? 'Đã hủy' : 'Cancelled')
+                              : (language === 'vi' ? 'Hoàn thành' : 'Completed')
+                          }
                         />
                       </TableCell>
 
@@ -211,7 +228,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                         <Button
                           size="sm"
                           variant="secondary"
-                          label="Quản lý / Điểm danh"
+                          label={language === 'vi' ? 'Quản lý / Điểm danh' : 'Manage / Check-in'}
                           onClick={() => onSelectEvent(ev)}
                         />
                       </TableCell>
@@ -224,7 +241,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
         </VStack>
       )}
 
-      {/* JOINED EVENTS CONTENT (For Player, this is the main focus; for Host, it's when tab is joining) */}
+      {/* JOINED EVENTS CONTENT */}
       {(!isHost || subTab === 'joining') && (
         <VStack gap={3}>
           {/* Status Filter Bar for Player */}
@@ -233,32 +250,32 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
               <Button
                 size="sm"
                 variant={statusFilter === 'ALL' ? 'primary' : 'secondary'}
-                label={`Tất cả (${joinedEvents.length})`}
+                label={`${t('myEvents.filterAll')} (${joinedEvents.length})`}
                 onClick={() => setStatusFilter('ALL')}
               />
               <Button
                 size="sm"
                 variant={statusFilter === 'PENDING' ? 'primary' : 'secondary'}
-                label={`⏳ Chờ duyệt (${pendingCount})`}
+                label={`⏳ ${t('myEvents.filterPending')} (${pendingCount})`}
                 onClick={() => setStatusFilter('PENDING')}
               />
               <Button
                 size="sm"
                 variant={statusFilter === 'APPROVED' ? 'primary' : 'secondary'}
-                label={`✅ Đã duyệt (${approvedCount})`}
+                label={`✅ ${t('myEvents.filterApproved')} (${approvedCount})`}
                 onClick={() => setStatusFilter('APPROVED')}
               />
               <Button
                 size="sm"
                 variant={statusFilter === 'CHECKED_IN' ? 'primary' : 'secondary'}
-                label={`🏸 Đã check-in (${checkedInCount})`}
+                label={`🏸 ${t('myEvents.filterCheckedIn')} (${checkedInCount})`}
                 onClick={() => setStatusFilter('CHECKED_IN')}
               />
               {cancelledCount > 0 && (
                 <Button
                   size="sm"
                   variant={statusFilter === 'CANCELLED' ? 'primary' : 'secondary'}
-                  label={`🚫 Đã hủy / Từ chối (${cancelledCount})`}
+                  label={`🚫 ${t('myEvents.filterCancelled')} (${cancelledCount})`}
                   onClick={() => setStatusFilter('CANCELLED')}
                 />
               )}
@@ -280,19 +297,19 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
             >
               <Text type="large" weight="semibold">
                 {joinedEvents.length === 0
-                  ? 'Bạn chưa đăng ký tham gia kèo cầu lông nào'
-                  : 'Không có kèo nào trong danh mục này'}
+                  ? t('myEvents.noJoined')
+                  : (language === 'vi' ? 'Không có kèo nào trong danh mục này' : 'No sessions in this category')}
               </Text>
               <Text color="secondary" style={{ maxWidth: '480px' }}>
                 {joinedEvents.length === 0
-                  ? 'Hãy truy cập mục "Khám phá kèo" để tìm kiếm các buổi chơi phù hợp với trình độ và khu vực của bạn!'
-                  : 'Hãy chọn bộ lọc "Tất cả" để xem toàn bộ lịch sử đăng ký của bạn.'}
+                  ? t('myEvents.noJoinedDesc')
+                  : (language === 'vi' ? 'Hãy chọn bộ lọc "Tất cả" để xem toàn bộ lịch sử đăng ký của bạn.' : 'Select "All" to view your complete registration history.')}
               </Text>
               {joinedEvents.length === 0 && onExplore && (
                 <Button
                   variant="primary"
                   size="md"
-                  label="🏸 Khám phá kèo ngay"
+                  label={`🏸 ${t('myEvents.exploreNow')}`}
                   onClick={onExplore}
                 />
               )}
@@ -301,20 +318,20 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHeaderCell>Sự kiện & Thời gian</TableHeaderCell>
-                  <TableHeaderCell>Địa điểm</TableHeaderCell>
-                  <TableHeaderCell>Host</TableHeaderCell>
-                  <TableHeaderCell>Chi phí</TableHeaderCell>
-                  <TableHeaderCell>Trạng thái đơn</TableHeaderCell>
-                  <TableHeaderCell>Thanh toán</TableHeaderCell>
-                  <TableHeaderCell>Thao tác</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Sự kiện & Thời gian' : 'Session & Time'}</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Địa điểm' : 'Venue'}</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Host' : 'Host'}</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Chi phí' : 'Fee'}</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Trạng thái đơn' : 'Application Status'}</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Thanh toán' : 'Payment'}</TableHeaderCell>
+                  <TableHeaderCell>{language === 'vi' ? 'Thao tác' : 'Actions'}</TableHeaderCell>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredJoinedEvents.map((ev) => {
                   const reg = (ev.registrations || []).find((r) => r.player_id === currentUser?.id);
                   const startDate = new Date(ev.start_time);
-                  const timeDisplay = `${startDate.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })} • ${startDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+                  const timeDisplay = `${startDate.toLocaleDateString(dateLocale, { weekday: 'short', day: '2-digit', month: '2-digit' })} • ${startDate.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })}`;
 
                   const isPending = reg?.status === 'PENDING';
                   const isApproved = reg?.status === 'APPROVED';
@@ -348,7 +365,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                           <HStack gap={1} style={{ alignItems: 'center' }}>
                             <Badge
                               variant={(ev.host?.reliability_score ?? 100) >= 90 ? 'green' : 'yellow'}
-                              label={`Uy tín ${ev.host?.reliability_score ?? 100}%`}
+                              label={`${language === 'vi' ? 'Uy tín' : 'Reliability'} ${ev.host?.reliability_score ?? 100}%`}
                             />
                           </HStack>
                         </VStack>
@@ -357,7 +374,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                       {/* Fee */}
                       <TableCell>
                         <Text weight="semibold" style={{ color: 'var(--color-primary)' }}>
-                          {formatFee(ev.fee_per_player)}
+                          {formatCurrency(ev.fee_per_player)}
                         </Text>
                       </TableCell>
 
@@ -377,16 +394,16 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                           }
                           label={
                             isCheckedIn
-                              ? '🏸 Đã check-in sân'
+                              ? (language === 'vi' ? '🏸 Đã check-in sân' : '🏸 Checked in')
                               : isApproved
-                              ? '✅ Đã duyệt (Giữ chỗ)'
+                              ? (language === 'vi' ? '✅ Đã duyệt (Giữ chỗ)' : '✅ Approved (Reserved)')
                               : isPending
-                              ? '⏳ Đang chờ duyệt'
+                              ? (language === 'vi' ? '⏳ Đang chờ duyệt' : '⏳ Pending approval')
                               : isRejected
-                              ? '❌ Host từ chối'
+                              ? (language === 'vi' ? '❌ Host từ chối' : '❌ Host rejected')
                               : isNoShow
-                              ? '⚠️ Vắng mặt'
-                              : '🚫 Đã hủy'
+                              ? (language === 'vi' ? '⚠️ Vắng mặt' : '⚠️ No-show')
+                              : (language === 'vi' ? '🚫 Đã hủy' : '🚫 Cancelled')
                           }
                         />
                       </TableCell>
@@ -403,10 +420,10 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                           }
                           label={
                             reg?.payment_status === 'PAID'
-                              ? 'Đã thanh toán'
+                              ? (language === 'vi' ? 'Đã thanh toán' : 'Paid')
                               : reg?.payment_status === 'PENDING_CONFIRMATION'
-                              ? 'Chờ đối soát'
-                              : 'Chưa thanh toán'
+                              ? (language === 'vi' ? 'Chờ đối soát' : 'Awaiting confirmation')
+                              : (language === 'vi' ? 'Chưa thanh toán' : 'Unpaid')
                           }
                         />
                       </TableCell>
@@ -417,7 +434,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                           <Button
                             size="sm"
                             variant="secondary"
-                            label="Chi tiết"
+                            label={language === 'vi' ? 'Chi tiết' : 'Details'}
                             onClick={() => onSelectEvent(ev)}
                           />
 
@@ -426,7 +443,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                             <Button
                               size="sm"
                               variant="destructive"
-                              label="Hủy đăng ký"
+                              label={language === 'vi' ? 'Hủy đăng ký' : 'Cancel'}
                               onClick={() => handleCancel(ev)}
                             />
                           )}
@@ -436,7 +453,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                             <Button
                               size="sm"
                               variant="secondary"
-                              label="Đánh giá Host"
+                              label={language === 'vi' ? 'Đánh giá Host' : 'Rate Host'}
                               onClick={() => onOpenReview(ev)}
                             />
                           )}

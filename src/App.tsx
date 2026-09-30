@@ -4,6 +4,7 @@ import { AppShell } from '@astryxdesign/core/AppShell';
 import { VStack } from '@astryxdesign/core/Stack';
 import { neutralTheme } from './themes/neutral/neutralTheme';
 import { AppProvider, useApp } from './context/AppContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Navigation } from './components/Navigation';
 import { EventExplorer } from './components/EventExplorer';
 import { MyEventsView } from './components/MyEventsView';
@@ -18,6 +19,7 @@ import { Event } from './types/database';
 
 const MainLayout: React.FC = () => {
   const { currentUser, events, isAdmin } = useApp();
+  const { t } = useLanguage();
 
   const [currentTab, setCurrentTab] = useState<'explorer' | 'my-events' | 'admin-dashboard'>('explorer');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -61,7 +63,7 @@ const MainLayout: React.FC = () => {
     }
     const isHost = isAdmin || currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com';
     if (!isHost) {
-      alert('Tài khoản của bạn là Player. Chỉ Host hoặc Admin mới có quyền tạo kèo giao lưu.');
+      alert(t('common.onlyHostCanCreate'));
       return;
     }
     setIsCreateOpen(true);
@@ -81,7 +83,6 @@ const MainLayout: React.FC = () => {
       variant="surface"
       contentPadding={4}
       style={{
-        minHeight: '100vh',
         minHeight: '100dvh',
         backgroundColor: 'var(--color-background-surface)',
         width: '100%',
@@ -173,9 +174,11 @@ const MainLayout: React.FC = () => {
 export default function App() {
   return (
     <Theme theme={neutralTheme} mode="light">
-      <AppProvider>
-        <MainLayout />
-      </AppProvider>
+      <LanguageProvider>
+        <AppProvider>
+          <MainLayout />
+        </AppProvider>
+      </LanguageProvider>
     </Theme>
   );
 }

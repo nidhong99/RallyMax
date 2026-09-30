@@ -6,6 +6,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { EventCard } from './EventCard';
 import { Event, SKILL_LABELS } from '../types/database';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import { MOCK_DISTRICTS } from '../data/mockData';
 
 interface EventExplorerProps {
@@ -18,6 +19,7 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
   onOpenCreateEvent,
 }) => {
   const { events, currentUser } = useApp();
+  const { t } = useLanguage();
   const isHost = currentUser?.role === 'HOST' || (currentUser?.email || '').toLowerCase() === 'nidhong99@gmail.com';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,10 +70,10 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
         }}
       >
         <Heading level={2}>
-          🏸 Nền tảng kết nối kèo cầu lông RallyMax
+          {t('explorer.heroTitle')}
         </Heading>
         <Text color="secondary" type="large">
-          Tìm bạn đánh cầu cùng trình độ, tổ chức giao lưu minh bạch, điểm danh chống bùng kèo
+          {t('explorer.heroSubtitle')}
         </Text>
       </VStack>
 
@@ -93,7 +95,7 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="🔍 Tìm tên sân, quận, tiêu đề kèo..."
+            placeholder={t('explorer.searchPlaceholder')}
             style={{
               padding: 'var(--spacing-2) var(--spacing-3)',
               borderRadius: 'var(--radius-element)',
@@ -117,7 +119,7 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
               fontSize: '14px',
             }}
           >
-            <option value="ALL">Tất cả quận / huyện</option>
+            <option value="ALL">{t('explorer.allDistricts')}</option>
             {MOCK_DISTRICTS.map((d) => (
               <option key={d.code} value={d.code}>
                 {d.name} ({d.province_code})
@@ -139,10 +141,10 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
               fontSize: '14px',
             }}
           >
-            <option value="ALL">Mọi trình độ (All)</option>
+            <option value="ALL">{t('explorer.allSkills')}</option>
             {Object.entries(SKILL_LABELS).map(([k, v]) => (
               <option key={k} value={k}>
-                {v.label}
+                {t(`skills.${k}.label`) || v.label}
               </option>
             ))}
           </select>
@@ -158,7 +160,7 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
             style={{ width: '16px', height: '16px' }}
           />
           <label htmlFor="availOnly" style={{ cursor: 'pointer' }}>
-            <Text type="supporting" weight="medium">Chỉ kèo còn slot</Text>
+            <Text type="supporting" weight="medium">{t('explorer.availableOnly')}</Text>
           </label>
         </HStack>
 
@@ -167,7 +169,7 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
           <Button
             size="sm"
             variant="ghost"
-            label="Xóa lọc"
+            label={t('explorer.reset')}
             onClick={() => {
               setSearchTerm('');
               setDistrictFilter('ALL');
@@ -181,7 +183,7 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
       {/* Results Header */}
       <HStack gap={2} style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <Text weight="bold">
-          Đang hiển thị {filteredEvents.length} kèo cầu lông
+          {t('explorer.foundCount', { count: filteredEvents.length })}
         </Text>
       </HStack>
 
@@ -201,23 +203,17 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
         >
           <Text style={{ fontSize: '40px' }}>🏸</Text>
           <VStack gap={1} style={{ alignItems: 'center' }}>
-            <Heading level={3}>Chưa có kèo giao lưu nào được mở</Heading>
-            {isHost ? (
-              <Text color="secondary" style={{ maxWidth: '480px' }}>
-                Hiện chưa có kèo nào trong danh sách. Hãy tạo kèo đầu tiên để mở slot cho các vận động viên đăng ký tham gia nhé!
-              </Text>
-            ) : (
-              <Text color="secondary" style={{ maxWidth: '480px' }}>
-                Hiện chưa có Host nào mở kèo giao lưu mới. Các kèo giao lưu sẽ tự động xuất hiện tại đây ngay khi được Host tạo!
-              </Text>
-            )}
+            <Heading level={3}>{t('explorer.noEvents')}</Heading>
+            <Text color="secondary" style={{ maxWidth: '480px' }}>
+              {t('explorer.noEventsDesc')}
+            </Text>
           </VStack>
 
           {isHost && (
             <Button
               variant="primary"
               size="lg"
-              label="+ Tạo Kèo Giao Lưu Mới"
+              label={`+ ${t('explorer.createNow')}`}
               onClick={onOpenCreateEvent}
             />
           )}
@@ -234,9 +230,9 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
             border: '1px solid var(--color-border)',
           }}
         >
-          <Text type="large" weight="semibold">Không tìm thấy kèo phù hợp</Text>
+          <Text type="large" weight="semibold">{t('explorer.noEvents')}</Text>
           <Text color="secondary">
-            Hiện chưa có kèo phù hợp với bộ lọc tìm kiếm. Bạn hãy thử chọn khu vực khác hoặc làm mới bộ lọc nhé!
+            {t('explorer.noEventsDesc')}
           </Text>
         </VStack>
       ) : (

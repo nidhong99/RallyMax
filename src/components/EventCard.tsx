@@ -8,7 +8,8 @@ import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Button } from '@astryxdesign/core/Button';
 import { Event, SKILL_LABELS } from '../types/database';
 import { useApp } from '../context/AppContext';
-import { MapPin, Clock, Users, Shield, ExternalLink } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { MapPin, Clock, Shield } from 'lucide-react';
 
 const DEFAULT_EVENT_COVER =
   'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop&q=80';
@@ -20,6 +21,7 @@ interface EventCardProps {
 
 export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
   const { currentUser } = useApp();
+  const { t, formatCurrency, formatDateRange, language } = useLanguage();
 
   const approvedRegistrations = (event.registrations || []).filter(
     (r) => r.status === 'APPROVED' || r.status === 'CHECKED_IN'
@@ -45,19 +47,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
       )
     : null;
 
-  // Format date & time
-  const startDate = new Date(event.start_time);
-  const endDate = new Date(event.end_time);
+  const minSkillInfo = SKILL_LABELS[event.min_skill_level];
+  const maxSkillInfo = SKILL_LABELS[event.max_skill_level];
 
-  const formatTimeRange = () => {
-    const timeStart = startDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    const timeEnd = endDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    const dayStr = startDate.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' });
-    return `${dayStr}, ${timeStart} - ${timeEnd}`;
-  };
+  const minSkillLabel = t(`skills.${event.min_skill_level}.label`) || minSkillInfo.label;
+  const maxSkillLabel = t(`skills.${event.max_skill_level}.label`) || maxSkillInfo.label;
 
-  const minSkill = SKILL_LABELS[event.min_skill_level];
-  const maxSkill = SKILL_LABELS[event.max_skill_level];
+  const skillBadgeText = `${minSkillLabel.split(' ')[0]}${minSkillLabel !== maxSkillLabel ? ` → ${maxSkillLabel.split(' ')[0]}` : ''}`;
 
   return (
     <Card
@@ -113,23 +109,23 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
           <HStack gap={1} style={{ justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             <HStack gap={1} style={{ alignItems: 'center' }}>
               <StatusDot
-                label={isFull ? 'Đã đủ slot' : event.status === 'OPEN' ? 'Đang mở' : 'Đã kết thúc'}
+                label={isFull ? t('card.full') : event.status === 'OPEN' ? t('card.open') : t('card.ended')}
                 variant={isFull ? 'warning' : event.status === 'OPEN' ? 'success' : 'error'}
               />
               <Badge
-                variant={minSkill.badgeVariant}
-                label={`${minSkill.label.split(' ')[0]}${minSkill.label !== maxSkill.label ? ` → ${maxSkill.label.split(' ')[0]}` : ''}`}
+                variant={minSkillInfo.badgeVariant}
+                label={skillBadgeText}
               />
             </HStack>
 
             <HStack gap={1} style={{ alignItems: 'center' }}>
               {isHost && (
-                <Badge variant="purple" label="👑 Kèo của bạn" />
+                <Badge variant="purple" label={t('card.yourEvent')} />
               )}
               {!isHost && userRegistration && (
                 <Badge
                   variant={userRegistration.status === 'APPROVED' ? 'green' : 'yellow'}
-                  label={userRegistration.status === 'APPROVED' ? '✅ Đã duyệt' : '⏳ Chờ duyệt'}
+                  label={userRegistration.status === 'APPROVED' ? t('card.approved') : t('card.pending')}
                 />
               )}
             </HStack>
@@ -138,7 +134,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
           <HStack gap={1} style={{ justifyContent: 'flex-end', alignItems: 'center', width: '100%' }}>
             <Badge
               variant={isFull ? 'red' : 'green'}
-              label={`🏸 ${totalApprovedPlayers}/${event.max_players} slot`}
+              label={t('card.slots', { count: totalApprovedPlayers, max: event.max_players })}
             />
           </HStack>
         </VStack>
@@ -175,13 +171,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
               <MapPin size={15} color="var(--color-icon-accent)" style={{ marginTop: '2px', flexShrink: 0 }} />
               <HStack gap={1} style={{ alignItems: 'center', flexWrap: 'wrap' }}>
                 <Text weight="medium" style={{ fontSize: '13px' }}>
-                  {event.venue_name || event.venue?.name || 'Sân cầu lông'} ({event.court_numbers || 'Sân 1'})
+                  {event.venue_name || event.venue?.name || t('card.court')} ({event.court_numbers || `${t('card.court')} 1`})
                 </Text>
                 {event.location_url && (
                   <Button
                     size="sm"
                     variant="ghost"
-                    label="Bản đồ ↗"
+                    label={t('card.map')}
                     onClick={(e) => {
                       e.stopPropagation();
                       window.open(event.location_url, '_blank');
@@ -199,7 +195,9 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
 
             <HStack gap={2} style={{ alignItems: 'center' }}>
               <Clock size={15} color="var(--color-icon-secondary)" style={{ flexShrink: 0 }} />
-              <Text color="secondary" style={{ fontSize: '13px' }}>{formatTimeRange()}</Text>
+              <Text color="secondary" style={{ fontSize: '13px' }}>
+                {formatDateRange(event.start_time, event.end_time)}
+              </Text>
             </HStack>
           </VStack>
         </VStack>
@@ -209,7 +207,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
           <HStack gap={1} style={{ alignItems: 'center' }}>
             <Shield size={14} color="var(--color-success)" />
             <Text type="supporting" color="secondary">
-              Host: <Text weight="semibold">{event.host?.full_name ? event.host.full_name.split(' ')[0] : 'Host'}</Text> ({event.host?.reliability_score ?? 100}% uy tín)
+              {t('card.host')}: <Text weight="semibold">{event.host?.full_name ? event.host.full_name.split(' ')[0] : 'Host'}</Text> ({event.host?.reliability_score ?? 100}% {t('card.reliability')})
             </Text>
           </HStack>
 
@@ -225,10 +223,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
           >
             <VStack gap={0}>
               <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
-                Phí tham gia
+                {t('card.fee')}
               </Text>
               <Text weight="bold" color="accent" style={{ fontSize: '15px' }}>
-                {event.fee_per_player.toLocaleString('vi-VN')} đ
+                {formatCurrency(event.fee_per_player)}
               </Text>
             </VStack>
 
@@ -236,7 +234,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
               <Button
                 variant={isHost ? 'secondary' : 'primary'}
                 size="sm"
-                label={isHost ? 'Quản lý kèo' : userRegistration ? 'Xem đơn' : 'Tham gia'}
+                label={isHost ? t('card.manage') : userRegistration ? t('card.viewApplication') : t('card.join')}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelect(event);

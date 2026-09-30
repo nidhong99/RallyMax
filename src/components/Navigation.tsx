@@ -6,15 +6,16 @@ import { Text } from '@astryxdesign/core/Text';
 import { DropdownMenu } from '@astryxdesign/core/DropdownMenu';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Badge } from '@astryxdesign/core/Badge';
-import { User, LogOut, Shield, ShieldCheck } from 'lucide-react';
+import { User, LogOut, Shield, ShieldCheck, Globe, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface NavigationProps {
   currentTab: 'explorer' | 'my-events' | 'admin-dashboard';
   onSelectTab: (tab: 'explorer' | 'my-events' | 'admin-dashboard') => void;
   onOpenCreateEvent: () => void;
   onOpenProfile: () => void;
-  onOpenSupabaseGuide: () => void;
+  onOpenSupabaseGuide?: () => void;
   onOpenAuth: () => void;
 }
 
@@ -23,10 +24,10 @@ export const Navigation: React.FC<NavigationProps> = ({
   onSelectTab,
   onOpenCreateEvent,
   onOpenProfile,
-  onOpenSupabaseGuide,
   onOpenAuth,
 }) => {
-  const { currentUser, isLoggedIn, logout, isRealSupabase, isAdmin } = useApp();
+  const { currentUser, isLoggedIn, logout, isAdmin } = useApp();
+  const { language, setLanguage, t } = useLanguage();
   const isHost = isAdmin || currentUser?.role === 'HOST' || (currentUser?.email || '').toLowerCase() === 'nidhong99@gmail.com';
 
   return (
@@ -34,7 +35,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       label="RallyMax Badminton Navigation"
       heading={
         <TopNavHeading
-          heading="RallyMax"
+          heading={t('nav.brand')}
           logo={
             <HStack
               gap={1}
@@ -55,18 +56,18 @@ export const Navigation: React.FC<NavigationProps> = ({
       startContent={
         <HStack gap={2}>
           <TopNavItem
-            label="Khám phá kèo"
+            label={t('nav.explore')}
             isSelected={currentTab === 'explorer'}
             onClick={() => onSelectTab('explorer')}
           />
           <TopNavItem
-            label="Kèo của tôi"
+            label={t('nav.myEvents')}
             isSelected={currentTab === 'my-events'}
             onClick={() => onSelectTab('my-events')}
           />
           {isAdmin && (
             <TopNavItem
-              label="🛡️ Quản trị (Admin)"
+              label={t('nav.admin')}
               isSelected={currentTab === 'admin-dashboard'}
               onClick={() => onSelectTab('admin-dashboard')}
             />
@@ -80,20 +81,45 @@ export const Navigation: React.FC<NavigationProps> = ({
             <Button
               variant="primary"
               size="sm"
-              label="Tạo kèo mới"
+              label={t('nav.createEvent')}
               onClick={onOpenCreateEvent}
             />
           )}
 
-          {/* Supabase Status Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            label={isRealSupabase ? 'Supabase Live' : 'Supabase Guide'}
-            onClick={onOpenSupabaseGuide}
+          {/* Language Switcher */}
+          <DropdownMenu
+            button={{
+              variant: 'ghost',
+              size: 'sm',
+              label: (
+                <HStack gap={1} style={{ alignItems: 'center' }}>
+                  <Globe size={15} color="var(--color-icon-secondary)" />
+                  <Text weight="medium" style={{ fontSize: '13px' }}>
+                    {language === 'vi' ? 'VI' : 'EN'}
+                  </Text>
+                </HStack>
+              ) as any,
+            }}
+            hasChevron={true}
+            alignment="end"
+            menuWidth={170}
+            items={[
+              {
+                label: 'Tiếng Việt',
+                icon: <Text style={{ fontSize: '14px' }}>🇻🇳</Text>,
+                endContent: language === 'vi' ? <Check size={14} color="var(--color-primary-base)" /> : null,
+                onClick: () => setLanguage('vi'),
+              },
+              {
+                label: 'English',
+                icon: <Text style={{ fontSize: '14px' }}>🇬🇧</Text>,
+                endContent: language === 'en' ? <Check size={14} color="var(--color-primary-base)" /> : null,
+                onClick: () => setLanguage('en'),
+              },
+            ]}
           />
 
-          {/* Profile Dropdown Menu */}
+          {/* Profile Dropdown Menu or Sign In */}
           {isLoggedIn && currentUser ? (
             <DropdownMenu
               button={{
@@ -104,10 +130,10 @@ export const Navigation: React.FC<NavigationProps> = ({
                     <Avatar
                       size="sm"
                       src={currentUser.avatar_url}
-                      name={currentUser.full_name || 'Vận động viên'}
+                      name={currentUser.full_name || t('nav.athlete')}
                     />
                     <Text weight="semibold" style={{ fontSize: '13px' }}>
-                      {currentUser.full_name?.trim() || currentUser.email.split('@')[0] || 'Vận động viên'}
+                      {currentUser.full_name?.trim() || currentUser.email.split('@')[0] || t('nav.athlete')}
                     </Text>
                     <Badge
                       variant={
@@ -119,10 +145,10 @@ export const Navigation: React.FC<NavigationProps> = ({
                       }
                       label={
                         isAdmin
-                          ? '🛡️ Admin'
+                          ? t('nav.roleAdminBadge')
                           : (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
-                          ? '👑 Host'
-                          : '🏸 Player'
+                          ? t('nav.roleHostBadge')
+                          : t('nav.rolePlayerBadge')
                       }
                     />
                     <Badge
@@ -140,7 +166,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                   label: (
                     <VStack gap={0}>
                       <Text weight="bold" style={{ fontSize: '13px' }}>
-                        {currentUser.full_name || 'Vận động viên'}
+                        {currentUser.full_name || t('nav.athlete')}
                       </Text>
                       <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
                         {currentUser.email}
@@ -148,10 +174,10 @@ export const Navigation: React.FC<NavigationProps> = ({
                     </VStack>
                   ),
                   description: isAdmin
-                    ? '🛡️ Quản trị viên tối cao (Toàn quyền hệ thống)'
+                    ? t('nav.roleSuperAdmin')
                     : (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
-                    ? '👑 Vai trò Host (Tổ chức kèo)'
-                    : '🏸 Vai trò Player (Tham gia kèo)',
+                    ? t('nav.roleHost')
+                    : t('nav.rolePlayer'),
                   icon: <Shield size={16} color="var(--color-icon-accent)" />,
                 },
                 ...(isAdmin
@@ -160,28 +186,28 @@ export const Navigation: React.FC<NavigationProps> = ({
                         type: 'divider' as const,
                       },
                       {
-                        label: 'Bảng Quản Trị Hệ Thống',
-                        description: 'Quản lý DB Sân, User & Kèo',
+                        label: t('nav.adminSystem'),
+                        description: t('nav.adminSystemDesc'),
                         icon: <ShieldCheck size={16} color="var(--color-icon-accent)" />,
                         onClick: () => onSelectTab('admin-dashboard'),
                       },
                     ]
                   : []),
                 {
-                  type: 'divider',
+                  type: 'divider' as const,
                 },
                 {
-                  label: 'Thông tin cá nhân',
-                  description: 'Xem & chỉnh sửa hồ sơ',
+                  label: t('nav.profile'),
+                  description: t('nav.profileDesc'),
                   icon: <User size={16} color="var(--color-icon-secondary)" />,
                   onClick: onOpenProfile,
                 },
                 {
-                  type: 'divider',
+                  type: 'divider' as const,
                 },
                 {
-                  label: 'Đăng xuất',
-                  description: 'Thoát khỏi phiên đăng nhập',
+                  label: t('nav.signOut'),
+                  description: t('nav.signOutDesc'),
                   icon: <LogOut size={16} color="var(--color-destructive)" />,
                   variant: 'destructive',
                   onClick: logout,
@@ -192,7 +218,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             <Button
               variant="primary"
               size="sm"
-              label="🔑 Đăng nhập"
+              label={t('nav.signIn')}
               onClick={onOpenAuth}
             />
           )}
