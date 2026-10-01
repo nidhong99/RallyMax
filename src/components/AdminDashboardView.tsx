@@ -1064,7 +1064,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       )}
 
       {/* 8. MODAL: Add / Edit Venue */}
-      {/* 8. MODAL: Add / Edit Venue */}
       <Dialog
         isOpen={isVenueModalOpen}
         onOpenChange={(open) => {
@@ -1297,10 +1296,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               hasDivider={true}
               style={{
                 background: 'var(--color-background-surface)',
-                padding: 'var(--spacing-3) var(--spacing-4)',
               }}
             >
-              <HStack gap={2} style={{ justifyContent: 'flex-end', width: '100%' }}>
+              <HStack gap={2} hAlign="end" style={{ justifyContent: 'flex-end', width: '100%' }}>
                 <Button
                   size="md"
                   variant="ghost"
