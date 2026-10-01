@@ -444,27 +444,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               />
             </HStack>
 
-            <HStack gap={2} style={{ alignItems: 'center' }}>
-              <Button
-                variant="secondary"
-                size="md"
-                label="Đồng bộ Supabase"
-                onClick={async () => {
-                  try {
-                    await refreshVenues();
-                    showSuccess('Đã đồng bộ dữ liệu sân bãi từ Supabase thành công!');
-                  } catch (err) {
-                    alert('Lỗi khi đồng bộ từ Supabase: ' + (err as Error).message);
-                  }
-                }}
-              />
-              <Button
-                variant="primary"
-                size="md"
-                label="Thêm mới"
-                onClick={handleOpenAddVenue}
-              />
-            </HStack>
+            <Button
+              variant="primary"
+              size="md"
+              label="Thêm mới"
+              onClick={handleOpenAddVenue}
+            />
           </HStack>
 
           {/* Venues Table Card */}
@@ -626,7 +611,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <Button
                 size="sm"
                 variant="secondary"
-                label="🔄 Đồng bộ từ Supabase"
+                label="Đồng bộ từ Supabase"
                 onClick={async () => {
                   await refreshProfiles();
                   showSuccess('Đã đồng bộ vai trò mới nhất từ cơ sở dữ liệu Supabase!');
