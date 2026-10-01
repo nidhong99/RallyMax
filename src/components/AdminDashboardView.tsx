@@ -386,25 +386,25 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         <Button
           variant={activeSubTab === 'venues' ? 'primary' : 'ghost'}
           size="sm"
-          label={`🏟️ Quản lý Sân bãi (${venues.length})`}
+          label={`Quản lý Sân bãi (${venues.length})`}
           onClick={() => setActiveSubTab('venues')}
         />
         <Button
           variant={activeSubTab === 'users' ? 'primary' : 'ghost'}
           size="sm"
-          label={`👥 Phân quyền Người dùng (${allUsers.length})`}
+          label={`Phân quyền Người dùng (${allUsers.length})`}
           onClick={() => setActiveSubTab('users')}
         />
         <Button
           variant={activeSubTab === 'events' ? 'primary' : 'ghost'}
           size="sm"
-          label={`🏸 Kèo toàn hệ thống (${events.length})`}
+          label={`Kèo toàn hệ thống (${events.length})`}
           onClick={() => setActiveSubTab('events')}
         />
         <Button
           variant={activeSubTab === 'reliability' ? 'primary' : 'ghost'}
           size="sm"
-          label={`⚖️ Giám sát Uy tín & Khiếu nại (${disputedUsers.length})`}
+          label={`Giám sát Uy tín & Khiếu nại (${disputedUsers.length})`}
           onClick={() => setActiveSubTab('reliability')}
         />
       </HStack>
