@@ -1064,164 +1064,262 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       )}
 
       {/* 8. MODAL: Add / Edit Venue */}
-      <Dialog isOpen={isVenueModalOpen} onClose={() => setIsVenueModalOpen(false)}>
-        <Layout>
-          <DialogHeader
-            title={editingVenue ? 'Chỉnh Sửa Sân Cầu Lông' : 'Thêm Sân Cầu Lông Mới'}
-            subtitle="Thông tin sân sẽ được lưu vào cơ sở dữ liệu và hiển thị ngay trên bộ chọn tạo kèo"
-          />
-
-          <LayoutContent>
-            <form onSubmit={handleSaveVenue} id="venue-form">
-              <VStack gap={3} style={{ padding: 'var(--spacing-2) 0' }}>
-                <VStack gap={1}>
-                  <Text weight="semibold">Tên sân cầu lông *</Text>
-                  <input
-                    type="text"
-                    required
-                    value={venueName}
-                    onChange={(e) => setVenueName(e.target.value)}
-                    placeholder="Ví dụ: Sân Cầu Lông Cung Thể Thao Quần Ngựa"
-                    style={{
-                      padding: 'var(--spacing-2)',
-                      borderRadius: 'var(--radius-element)',
-                      border: '1px solid var(--color-border)',
-                      width: '100%',
-                    }}
-                  />
-                </VStack>
-
-                <HStack gap={2} style={{ width: '100%' }}>
-                  <VStack gap={1} style={{ flex: 2 }}>
-                    <Text weight="semibold">Địa chỉ chi tiết *</Text>
+      {/* 8. MODAL: Add / Edit Venue */}
+      <Dialog
+        isOpen={isVenueModalOpen}
+        onOpenChange={(open) => {
+          if (!open) setIsVenueModalOpen(false);
+        }}
+        purpose="form"
+        width={580}
+        maxHeight="90dvh"
+      >
+        <Layout
+          height="fill"
+          header={
+            <DialogHeader
+              title={editingVenue ? 'Chỉnh Sửa Sân Cầu Lông' : 'Thêm Sân Cầu Lông Mới'}
+              subtitle="Thông tin sân sẽ được lưu vào cơ sở dữ liệu và hiển thị trên bộ chọn khi tạo kèo"
+              hasDivider={true}
+              onOpenChange={(open) => {
+                if (!open) setIsVenueModalOpen(false);
+              }}
+            />
+          }
+          content={
+            <LayoutContent
+              isScrollable={true}
+              padding={4}
+              style={{
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <form onSubmit={handleSaveVenue} id="venue-form">
+                <VStack gap={4}>
+                  {/* Row 1: Tên sân */}
+                  <VStack gap={1}>
+                    <Text weight="semibold" style={{ fontSize: '13px' }}>
+                      Tên sân cầu lông <span style={{ color: 'var(--color-destructive, #ef4444)' }}>*</span>
+                    </Text>
                     <input
                       type="text"
                       required
-                      value={venueAddress}
-                      onChange={(e) => setVenueAddress(e.target.value)}
-                      placeholder="Số 304 Văn Cao, Phường Liễu Giai"
+                      value={venueName}
+                      onChange={(e) => setVenueName(e.target.value)}
+                      placeholder="Ví dụ: Sân Cầu Lông Cung Thể Thao Quần Ngựa"
                       style={{
-                        padding: 'var(--spacing-2)',
+                        padding: 'var(--spacing-2) var(--spacing-3)',
                         borderRadius: 'var(--radius-element)',
                         border: '1px solid var(--color-border)',
-                        width: '100%',
-                      }}
-                    />
-                  </VStack>
-
-                  <VStack gap={1} style={{ flex: 1 }}>
-                    <Text weight="semibold">Khu vực (Quận / Huyện) *</Text>
-                    <select
-                      value={venueDistrictCode}
-                      onChange={(e) => setVenueDistrictCode(e.target.value)}
-                      style={{
-                        padding: 'var(--spacing-2)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                        width: '100%',
-                        backgroundColor: 'var(--color-background-surface)',
+                        background: 'var(--color-background-surface)',
+                        color: 'var(--color-text-primary)',
                         fontSize: '13px',
-                      }}
-                    >
-                      {MOCK_DISTRICTS.map((d) => (
-                        <option key={d.code} value={d.code}>
-                          {d.name} ({d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'TP.HCM' : 'Đà Nẵng'})
-                        </option>
-                      ))}
-                    </select>
-                  </VStack>
-                </HStack>
-
-                <HStack gap={2} style={{ width: '100%' }}>
-                  <VStack gap={1} style={{ flex: 1 }}>
-                    <Text weight="semibold">Tổng số sân</Text>
-                    <input
-                      type="number"
-                      min={1}
-                      max={50}
-                      value={venueTotalCourts}
-                      onChange={(e) => setVenueTotalCourts(Number(e.target.value))}
-                      style={{
-                        padding: 'var(--spacing-2)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
+                        height: '38px',
                         width: '100%',
+                        outline: 'none',
+                        boxSizing: 'border-box',
                       }}
                     />
                   </VStack>
-                </HStack>
 
-                <VStack gap={1}>
-                  <Text weight="semibold">Link vị trí Google Maps (URL)</Text>
-                  <input
-                    type="url"
-                    value={venueMapsUrl}
-                    onChange={(e) => setVenueMapsUrl(e.target.value)}
-                    placeholder="https://maps.app.goo.gl/..."
-                    style={{
-                      padding: 'var(--spacing-2)',
-                      borderRadius: 'var(--radius-element)',
-                      border: '1px solid var(--color-border)',
-                      width: '100%',
-                    }}
-                  />
+                  {/* Row 2: Địa chỉ & Khu vực */}
+                  <HStack gap={3} style={{ width: '100%' }}>
+                    <VStack gap={1} style={{ flex: 3 }}>
+                      <Text weight="semibold" style={{ fontSize: '13px' }}>
+                        Địa chỉ chi tiết <span style={{ color: 'var(--color-destructive, #ef4444)' }}>*</span>
+                      </Text>
+                      <input
+                        type="text"
+                        required
+                        value={venueAddress}
+                        onChange={(e) => setVenueAddress(e.target.value)}
+                        placeholder="Số 30 Văn Cao, Phường Liễu Giai"
+                        style={{
+                          padding: 'var(--spacing-2) var(--spacing-3)',
+                          borderRadius: 'var(--radius-element)',
+                          border: '1px solid var(--color-border)',
+                          background: 'var(--color-background-surface)',
+                          color: 'var(--color-text-primary)',
+                          fontSize: '13px',
+                          height: '38px',
+                          width: '100%',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </VStack>
+
+                    <VStack gap={1} style={{ flex: 2 }}>
+                      <Text weight="semibold" style={{ fontSize: '13px' }}>
+                        Khu vực (Quận / Huyện) <span style={{ color: 'var(--color-destructive, #ef4444)' }}>*</span>
+                      </Text>
+                      <select
+                        value={venueDistrictCode}
+                        onChange={(e) => setVenueDistrictCode(e.target.value)}
+                        style={{
+                          padding: 'var(--spacing-2) var(--spacing-3)',
+                          borderRadius: 'var(--radius-element)',
+                          border: '1px solid var(--color-border)',
+                          backgroundColor: 'var(--color-background-surface)',
+                          color: 'var(--color-text-primary)',
+                          fontSize: '13px',
+                          height: '38px',
+                          width: '100%',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          boxSizing: 'border-box',
+                        }}
+                      >
+                        {MOCK_DISTRICTS.map((d) => (
+                          <option key={d.code} value={d.code}>
+                            {d.name} ({d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'TP.HCM' : 'Đà Nẵng'})
+                          </option>
+                        ))}
+                      </select>
+                    </VStack>
+                  </HStack>
+
+                  {/* Row 3: Quy mô sân & Giá tham khảo */}
+                  <HStack gap={3} style={{ width: '100%' }}>
+                    <VStack gap={1} style={{ flex: 1 }}>
+                      <Text weight="semibold" style={{ fontSize: '13px' }}>
+                        Tổng số thảm / sân <span style={{ color: 'var(--color-destructive, #ef4444)' }}>*</span>
+                      </Text>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        required
+                        value={venueTotalCourts}
+                        onChange={(e) => setVenueTotalCourts(Number(e.target.value))}
+                        style={{
+                          padding: 'var(--spacing-2) var(--spacing-3)',
+                          borderRadius: 'var(--radius-element)',
+                          border: '1px solid var(--color-border)',
+                          background: 'var(--color-background-surface)',
+                          color: 'var(--color-text-primary)',
+                          fontSize: '13px',
+                          height: '38px',
+                          width: '100%',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </VStack>
+
+                    <VStack gap={1} style={{ flex: 1 }}>
+                      <Text weight="semibold" style={{ fontSize: '13px' }}>
+                        Giá thuê tham khảo / giờ
+                      </Text>
+                      <input
+                        type="text"
+                        value={venuePriceRange}
+                        onChange={(e) => setVenuePriceRange(e.target.value)}
+                        placeholder="Ví dụ: 80.000đ - 120.000đ / giờ"
+                        style={{
+                          padding: 'var(--spacing-2) var(--spacing-3)',
+                          borderRadius: 'var(--radius-element)',
+                          border: '1px solid var(--color-border)',
+                          background: 'var(--color-background-surface)',
+                          color: 'var(--color-text-primary)',
+                          fontSize: '13px',
+                          height: '38px',
+                          width: '100%',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </VStack>
+                  </HStack>
+
+                  {/* Row 4: Hotline & Link Google Maps */}
+                  <HStack gap={3} style={{ width: '100%' }}>
+                    <VStack gap={1} style={{ flex: 1 }}>
+                      <Text weight="semibold" style={{ fontSize: '13px' }}>
+                        Số điện thoại đặt sân
+                      </Text>
+                      <input
+                        type="tel"
+                        value={venuePhone}
+                        onChange={(e) => setVenuePhone(e.target.value)}
+                        placeholder="0912 345 678"
+                        style={{
+                          padding: 'var(--spacing-2) var(--spacing-3)',
+                          borderRadius: 'var(--radius-element)',
+                          border: '1px solid var(--color-border)',
+                          background: 'var(--color-background-surface)',
+                          color: 'var(--color-text-primary)',
+                          fontSize: '13px',
+                          height: '38px',
+                          width: '100%',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </VStack>
+
+                    <VStack gap={1} style={{ flex: 1 }}>
+                      <Text weight="semibold" style={{ fontSize: '13px' }}>
+                        Link vị trí Google Maps (URL)
+                      </Text>
+                      <input
+                        type="url"
+                        value={venueMapsUrl}
+                        onChange={(e) => setVenueMapsUrl(e.target.value)}
+                        placeholder="https://maps.app.goo.gl/..."
+                        style={{
+                          padding: 'var(--spacing-2) var(--spacing-3)',
+                          borderRadius: 'var(--radius-element)',
+                          border: '1px solid var(--color-border)',
+                          background: 'var(--color-background-surface)',
+                          color: 'var(--color-text-primary)',
+                          fontSize: '13px',
+                          height: '38px',
+                          width: '100%',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </VStack>
+                  </HStack>
+
                   <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
-                    Người chơi bấm vào link này để mở Google Maps chỉ đường trực tiếp tới sân.
+                    💡 Link Google Maps sẽ cho phép các vận động viên bấm trực tiếp để mở ứng dụng Bản đồ dẫn đường tới sân.
                   </Text>
                 </VStack>
-
-                <HStack gap={2} style={{ width: '100%' }}>
-                  <VStack gap={1} style={{ flex: 1 }}>
-                    <Text weight="semibold">Số điện thoại đặt sân</Text>
-                    <input
-                      type="text"
-                      value={venuePhone}
-                      onChange={(e) => setVenuePhone(e.target.value)}
-                      placeholder="0988.xxx.xxx"
-                      style={{
-                        padding: 'var(--spacing-2)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                        width: '100%',
-                      }}
-                    />
-                  </VStack>
-
-                  <VStack gap={1} style={{ flex: 1 }}>
-                    <Text weight="semibold">Giá tham khảo/giờ</Text>
-                    <input
-                      type="text"
-                      value={venuePriceRange}
-                      onChange={(e) => setVenuePriceRange(e.target.value)}
-                      placeholder="70.000đ - 120.000đ/h"
-                      style={{
-                        padding: 'var(--spacing-2)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                        width: '100%',
-                      }}
-                    />
-                  </VStack>
-                </HStack>
-              </VStack>
-            </form>
-          </LayoutContent>
-
-          <LayoutFooter>
-            <HStack gap={2} style={{ justifyContent: 'flex-end', width: '100%' }}>
-              <Button
-                variant="secondary"
-                label="Hủy bỏ"
-                onClick={() => setIsVenueModalOpen(false)}
-              />
-              <Button
-                variant="primary"
-                label={editingVenue ? 'Lưu thay đổi' : 'Tạo sân mới'}
-                onClick={(e) => handleSaveVenue(e as any)}
-              />
-            </HStack>
-          </LayoutFooter>
-        </Layout>
+              </form>
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter
+              hasDivider={true}
+              style={{
+                background: 'var(--color-background-surface)',
+                padding: 'var(--spacing-3) var(--spacing-4)',
+              }}
+            >
+              <HStack gap={2} style={{ justifyContent: 'flex-end', width: '100%' }}>
+                <Button
+                  size="md"
+                  variant="ghost"
+                  label="Hủy bỏ"
+                  onClick={() => setIsVenueModalOpen(false)}
+                />
+                <Button
+                  size="md"
+                  variant="primary"
+                  label={editingVenue ? 'Lưu thay đổi' : '+ Thêm sân vào database'}
+                  onClick={() => {
+                    const form = document.getElementById('venue-form') as HTMLFormElement;
+                    if (form) form.requestSubmit();
+                  }}
+                />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
       </Dialog>
     </VStack>
   );
