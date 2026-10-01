@@ -286,14 +286,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     // 1b. Fetch venues from Supabase database
-    supabase.from('venues').select('*').then(({ data, error }) => {
-      if (data && data.length > 0 && !error) {
-        setVenues(data);
-        localStorage.setItem('rallymax_venues', JSON.stringify(data));
-      }
-    }, err => {
-      console.warn('Supabase venues query error:', err);
-    });
+    const fetchCloudVenues = () => {
+      supabase
+        .from('venues')
+        .select('*')
+        .order('name', { ascending: true })
+        .then(({ data, error }) => {
+          if (data && !error && data.length > 0) {
+            setVenues(data);
+            localStorage.setItem('rallymax_venues', JSON.stringify(data));
+          } else if (error) {
+            console.warn('Supabase venues query error:', error.message);
+          }
+        }, err => {
+          console.warn('Supabase venues network error:', err);
+        });
+    };
+
+    fetchCloudVenues();
 
     // 2. Check active auth session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -376,9 +386,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       )
       .subscribe();
 
+    // 5b. Realtime listener: instant 2-way sync on venues INSERT, UPDATE, DELETE
+    const venuesChannel = supabase
+      .channel('public:venues_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'venues' },
+        (payload: any) => {
+          console.log('[Supabase Realtime] Venues change detected:', payload);
+          if (payload.eventType === 'DELETE' && payload.old?.id) {
+            const deletedId = payload.old.id;
+            setVenues(prev => {
+              const filtered = prev.filter(v => v.id !== deletedId);
+              localStorage.setItem('rallymax_venues', JSON.stringify(filtered));
+              return filtered;
+            });
+          } else {
+            fetchCloudVenues();
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       subscription?.unsubscribe();
       supabase.removeChannel(eventsChannel);
+      supabase.removeChannel(venuesChannel);
     };
   }, []);
 
@@ -994,101 +1027,104 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const refreshVenues = async () => {
     if (!supabase) return;
-    try {
-      const { data, error } = await supabase.from('venues').select('*');
-      if (data && !error && data.length > 0) {
-        setVenues(data);
-        localStorage.setItem('rallymax_venues', JSON.stringify(data));
-      }
-    } catch (err) {
-      console.warn('Supabase refreshVenues error:', err);
+    const { data, error } = await supabase.from('venues').select('*').order('name', { ascending: true });
+    if (error) {
+      console.warn('Supabase refreshVenues error:', error);
+      throw new Error(error.message);
+    }
+    if (data) {
+      setVenues(data);
+      localStorage.setItem('rallymax_venues', JSON.stringify(data));
     }
   };
 
   const createVenue = async (venueData: Partial<Venue>): Promise<Venue> => {
-    const venueId = generateUuid();
+    const venueId = venueData.id || generateUuid();
     const newVenue: Venue = {
       id: venueId,
       name: venueData.name || 'Sân Cầu Lông Mới',
       address: venueData.address || '',
       district_code: venueData.district_code || 'HN_BD',
-      total_courts: venueData.total_courts || 4,
+      total_courts: Number(venueData.total_courts) || 4,
       contact_phone: venueData.contact_phone,
       maps_url: venueData.maps_url,
       price_range: venueData.price_range,
       created_by: (currentUser?.id && currentUser.id.includes('-')) ? currentUser.id : undefined,
       created_at: new Date().toISOString(),
     };
+
+    if (supabase) {
+      const payload: Record<string, any> = {
+        id: venueId,
+        name: newVenue.name,
+        address: newVenue.address,
+        district_code: newVenue.district_code,
+        total_courts: newVenue.total_courts,
+        contact_phone: newVenue.contact_phone || null,
+        maps_url: newVenue.maps_url || null,
+        price_range: newVenue.price_range || null,
+      };
+      if (newVenue.created_by) {
+        payload.created_by = newVenue.created_by;
+      }
+      const { data, error } = await supabase.from('venues').insert([payload]).select().single();
+      if (error) {
+        console.error('Supabase venue insert error:', error);
+        throw new Error(error.message);
+      }
+      if (data) {
+        newVenue.id = data.id;
+      }
+    }
+
     setVenues(prev => {
-      const updated = [newVenue, ...prev];
+      const updated = [newVenue, ...prev.filter(v => v.id !== newVenue.id)];
       localStorage.setItem('rallymax_venues', JSON.stringify(updated));
       return updated;
     });
-
-    if (supabase) {
-      try {
-        const payload: Record<string, any> = {
-          name: newVenue.name,
-          address: newVenue.address,
-          district_code: newVenue.district_code,
-          total_courts: newVenue.total_courts,
-          contact_phone: newVenue.contact_phone || null,
-          maps_url: newVenue.maps_url || null,
-          price_range: newVenue.price_range || null,
-        };
-        if (newVenue.created_by) {
-          payload.created_by = newVenue.created_by;
-        }
-        const { error } = await supabase.from('venues').insert([payload]);
-        if (error) console.warn('Supabase venue insert warning:', error.message);
-      } catch (err) {
-        console.warn('Supabase venue insert error:', err);
-      }
-    }
 
     return newVenue;
   };
 
   const updateVenue = async (venueId: string, venueData: Partial<Venue>) => {
+    if (supabase) {
+      const updatePayload: Record<string, any> = {};
+      if (venueData.name !== undefined) updatePayload.name = venueData.name;
+      if (venueData.address !== undefined) updatePayload.address = venueData.address;
+      if (venueData.district_code !== undefined) updatePayload.district_code = venueData.district_code;
+      if (venueData.total_courts !== undefined) updatePayload.total_courts = Number(venueData.total_courts) || 1;
+      if (venueData.contact_phone !== undefined) updatePayload.contact_phone = venueData.contact_phone || null;
+      if (venueData.maps_url !== undefined) updatePayload.maps_url = venueData.maps_url || null;
+      if (venueData.price_range !== undefined) updatePayload.price_range = venueData.price_range || null;
+
+      const { error } = await supabase.from('venues').update(updatePayload).eq('id', venueId);
+      if (error) {
+        console.error('Supabase update venue error:', error);
+        throw new Error(error.message);
+      }
+    }
+
     setVenues(prev => {
       const updated = prev.map(v => (v.id === venueId ? { ...v, ...venueData } : v));
       localStorage.setItem('rallymax_venues', JSON.stringify(updated));
       return updated;
     });
-
-    if (supabase) {
-      try {
-        const updatePayload: Record<string, any> = {};
-        if (venueData.name !== undefined) updatePayload.name = venueData.name;
-        if (venueData.address !== undefined) updatePayload.address = venueData.address;
-        if (venueData.district_code !== undefined) updatePayload.district_code = venueData.district_code;
-        if (venueData.total_courts !== undefined) updatePayload.total_courts = venueData.total_courts;
-        if (venueData.contact_phone !== undefined) updatePayload.contact_phone = venueData.contact_phone;
-        if (venueData.maps_url !== undefined) updatePayload.maps_url = venueData.maps_url;
-        if (venueData.price_range !== undefined) updatePayload.price_range = venueData.price_range;
-        const { error } = await supabase.from('venues').update(updatePayload).eq('id', venueId);
-        if (error) console.warn('Supabase update venue warning:', error.message);
-      } catch (err) {
-        console.warn('Supabase update venue error:', err);
-      }
-    }
   };
 
   const deleteVenue = async (venueId: string) => {
+    if (supabase) {
+      const { error } = await supabase.from('venues').delete().eq('id', venueId);
+      if (error) {
+        console.error('Supabase delete venue error:', error);
+        throw new Error(error.message);
+      }
+    }
+
     setVenues(prev => {
       const filtered = prev.filter(v => v.id !== venueId);
       localStorage.setItem('rallymax_venues', JSON.stringify(filtered));
       return filtered;
     });
-
-    if (supabase) {
-      try {
-        const { error } = await supabase.from('venues').delete().eq('id', venueId);
-        if (error) console.warn('Supabase delete venue warning:', error.message);
-      } catch (err) {
-        console.warn('Supabase delete venue error:', err);
-      }
-    }
   };
 
   const updateUserRole = async (userId: string, newRole: 'PLAYER' | 'HOST' | 'ADMIN', isVerifiedHost?: boolean) => {

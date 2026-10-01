@@ -447,11 +447,15 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             <HStack gap={2} style={{ alignItems: 'center' }}>
               <Button
                 variant="secondary"
-                size="sm"
+                size="md"
                 label="Đồng bộ Supabase"
                 onClick={async () => {
-                  await refreshVenues();
-                  showSuccess('Đã đồng bộ lại danh sách sân từ Supabase!');
+                  try {
+                    await refreshVenues();
+                    showSuccess('Đã đồng bộ dữ liệu sân bãi từ Supabase thành công!');
+                  } catch (err) {
+                    alert('Lỗi khi đồng bộ từ Supabase: ' + (err as Error).message);
+                  }
                 }}
               />
               <Button
