@@ -284,6 +284,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Supabase profiles query error:', err);
     });
 
+    // 1b. Fetch venues from Supabase database
+    supabase.from('venues').select('*').then(({ data, error }) => {
+      if (data && data.length > 0 && !error) {
+        setVenues(data);
+        localStorage.setItem('rallymax_venues', JSON.stringify(data));
+      }
+    }, err => {
+      console.warn('Supabase venues query error:', err);
+    });
+
     // 2. Check active auth session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
