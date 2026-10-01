@@ -1308,7 +1308,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <Button
                   size="md"
                   variant="primary"
-                  label={editingVenue ? 'Lưu thay đổi' : '+ Thêm sân vào database'}
+                  label={editingVenue ? 'Lưu thay đổi' : 'Lưu thay đổi'}
                   onClick={() => {
                     const form = document.getElementById('venue-form') as HTMLFormElement;
                     if (form) form.requestSubmit();
