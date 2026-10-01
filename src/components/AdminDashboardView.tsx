@@ -456,8 +456,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               />
               <Button
                 variant="primary"
-                size="sm"
-                label="+ Thêm Sân Mới vào Database"
+                size="md"
+                label="Thêm mới"
                 onClick={handleOpenAddVenue}
               />
             </HStack>
@@ -695,8 +695,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                               displayRole === 'ADMIN'
                                 ? 'rgba(99, 102, 241, 0.1)'
                                 : displayRole === 'HOST'
-                                ? 'rgba(234, 179, 8, 0.1)'
-                                : 'var(--color-background-surface)',
+                                  ? 'rgba(234, 179, 8, 0.1)'
+                                  : 'var(--color-background-surface)',
                             fontWeight: 600,
                             fontSize: '12px',
                             cursor: 'pointer',
@@ -904,19 +904,19 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                             evt.status === 'OPEN'
                               ? 'green'
                               : evt.status === 'FULL'
-                              ? 'purple'
-                              : evt.status === 'CANCELLED'
-                              ? 'red'
-                              : 'neutral'
+                                ? 'purple'
+                                : evt.status === 'CANCELLED'
+                                  ? 'red'
+                                  : 'neutral'
                           }
                           label={
                             evt.status === 'OPEN'
                               ? 'Mở đăng ký'
                               : evt.status === 'FULL'
-                              ? 'Đã full'
-                              : evt.status === 'CANCELLED'
-                              ? 'Đã hủy'
-                              : 'Kết thúc'
+                                ? 'Đã full'
+                                : evt.status === 'CANCELLED'
+                                  ? 'Đã hủy'
+                                  : 'Kết thúc'
                           }
                         />
                       </td>
