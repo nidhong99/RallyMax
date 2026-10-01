@@ -75,6 +75,8 @@ export interface Venue {
   name: string;
   address: string;
   district_code: string;
+  district?: string;
+  city?: string;
   latitude?: number;
   longitude?: number;
   total_courts: number;

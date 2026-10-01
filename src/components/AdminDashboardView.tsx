@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Venue, Event, Profile, UserRole } from '../types/database';
+import { MOCK_DISTRICTS } from '../data/mockData';
 
 interface AdminDashboardViewProps {
   onSelectEvent: (event: Event) => void;
@@ -54,6 +55,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     resetUserReliability,
     deleteUser,
     refreshProfiles,
+    refreshVenues,
     cancelEvent,
     deleteEvent,
     isRealSupabase,
@@ -73,8 +75,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
   const [venueName, setVenueName] = useState('');
   const [venueAddress, setVenueAddress] = useState('');
-  const [venueDistrict, setVenueDistrict] = useState('');
-  const [venueCity, setVenueCity] = useState('Hà Nội');
+  const [venueDistrictCode, setVenueDistrictCode] = useState('HN_BD');
   const [venueTotalCourts, setVenueTotalCourts] = useState<number>(4);
   const [venueMapsUrl, setVenueMapsUrl] = useState('');
   const [venuePhone, setVenuePhone] = useState('');
@@ -120,8 +121,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setEditingVenue(null);
     setVenueName('');
     setVenueAddress('');
-    setVenueDistrict('Cầu Giấy');
-    setVenueCity('Hà Nội');
+    setVenueDistrictCode('HN_BD');
     setVenueTotalCourts(6);
     setVenueMapsUrl('');
     setVenuePhone('');
@@ -133,8 +133,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setEditingVenue(v);
     setVenueName(v.name);
     setVenueAddress(v.address);
-    setVenueDistrict(v.district);
-    setVenueCity(v.city);
+    setVenueDistrictCode(v.district_code || 'HN_BD');
     setVenueTotalCourts(v.total_courts);
     setVenueMapsUrl(v.maps_url || '');
     setVenuePhone(v.contact_phone || '');
@@ -154,8 +153,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         await updateVenue(editingVenue.id, {
           name: venueName.trim(),
           address: venueAddress.trim(),
-          district: venueDistrict.trim(),
-          city: venueCity.trim(),
+          district_code: venueDistrictCode,
           total_courts: Number(venueTotalCourts) || 1,
           maps_url: venueMapsUrl.trim(),
           contact_phone: venuePhone.trim(),
@@ -166,8 +164,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         await createVenue({
           name: venueName.trim(),
           address: venueAddress.trim(),
-          district: venueDistrict.trim(),
-          city: venueCity.trim(),
+          district_code: venueDistrictCode,
           total_courts: Number(venueTotalCourts) || 1,
           maps_url: venueMapsUrl.trim(),
           contact_phone: venuePhone.trim(),
@@ -194,11 +191,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   };
 
   // Filtered lists
-  const filteredVenues = venues.filter(v =>
-    v.name.toLowerCase().includes(venueSearch.toLowerCase()) ||
-    v.address.toLowerCase().includes(venueSearch.toLowerCase()) ||
-    v.district.toLowerCase().includes(venueSearch.toLowerCase())
-  );
+  const filteredVenues = venues.filter(v => {
+    const d = MOCK_DISTRICTS.find(item => item.code === v.district_code);
+    const dName = d ? d.name : (v.district || '');
+    const cityName = d ? (d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'Hồ Chí Minh' : 'Đà Nẵng') : (v.city || '');
+    return (
+      v.name.toLowerCase().includes(venueSearch.toLowerCase()) ||
+      v.address.toLowerCase().includes(venueSearch.toLowerCase()) ||
+      dName.toLowerCase().includes(venueSearch.toLowerCase()) ||
+      cityName.toLowerCase().includes(venueSearch.toLowerCase())
+    );
+  });
 
   const filteredUsers = allUsers.filter(u => {
     const matchesQuery = (u.full_name || '').toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -441,12 +444,23 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               />
             </HStack>
 
-            <Button
-              variant="primary"
-              size="sm"
-              label="+ Thêm Sân Mới vào Database"
-              onClick={handleOpenAddVenue}
-            />
+            <HStack gap={2} style={{ alignItems: 'center' }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                label="Đồng bộ Supabase"
+                onClick={async () => {
+                  await refreshVenues();
+                  showSuccess('Đã đồng bộ lại danh sách sân từ Supabase!');
+                }}
+              />
+              <Button
+                variant="primary"
+                size="sm"
+                label="+ Thêm Sân Mới vào Database"
+                onClick={handleOpenAddVenue}
+              />
+            </HStack>
           </HStack>
 
           {/* Venues Table Card */}
@@ -480,7 +494,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         <VStack gap={0}>
                           <Text weight="bold">{v.name}</Text>
                           <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
-                            {v.district}, {v.city}
+                            {(() => {
+                              const d = MOCK_DISTRICTS.find(item => item.code === v.district_code);
+                              if (d) {
+                                const cityName = d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'TP.HCM' : 'Đà Nẵng';
+                                return `${d.name}, ${cityName}`;
+                              }
+                              return v.district ? `${v.district}, ${v.city || ''}` : v.district_code;
+                            })()}
                           </Text>
                         </VStack>
                       </td>
@@ -1089,39 +1110,29 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   </VStack>
 
                   <VStack gap={1} style={{ flex: 1 }}>
-                    <Text weight="semibold">Quận/Huyện</Text>
-                    <input
-                      type="text"
-                      value={venueDistrict}
-                      onChange={(e) => setVenueDistrict(e.target.value)}
-                      placeholder="Ba Đình"
+                    <Text weight="semibold">Khu vực (Quận / Huyện) *</Text>
+                    <select
+                      value={venueDistrictCode}
+                      onChange={(e) => setVenueDistrictCode(e.target.value)}
                       style={{
                         padding: 'var(--spacing-2)',
                         borderRadius: 'var(--radius-element)',
                         border: '1px solid var(--color-border)',
                         width: '100%',
+                        backgroundColor: 'var(--color-background-surface)',
+                        fontSize: '13px',
                       }}
-                    />
+                    >
+                      {MOCK_DISTRICTS.map((d) => (
+                        <option key={d.code} value={d.code}>
+                          {d.name} ({d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'TP.HCM' : 'Đà Nẵng'})
+                        </option>
+                      ))}
+                    </select>
                   </VStack>
                 </HStack>
 
                 <HStack gap={2} style={{ width: '100%' }}>
-                  <VStack gap={1} style={{ flex: 1 }}>
-                    <Text weight="semibold">Thành phố</Text>
-                    <input
-                      type="text"
-                      value={venueCity}
-                      onChange={(e) => setVenueCity(e.target.value)}
-                      placeholder="Hà Nội"
-                      style={{
-                        padding: 'var(--spacing-2)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                        width: '100%',
-                      }}
-                    />
-                  </VStack>
-
                   <VStack gap={1} style={{ flex: 1 }}>
                     <Text weight="semibold">Tổng số sân</Text>
                     <input

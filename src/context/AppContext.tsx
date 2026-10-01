@@ -39,6 +39,7 @@ interface AppContextType {
   deleteUser: (userId: string) => Promise<void>;
   purgeMockUsers: () => void;
   refreshProfiles: () => Promise<void>;
+  refreshVenues: () => Promise<void>;
   updateProfile: (profileData: Partial<Profile>) => Promise<void>;
   addReview: (reviewData: Partial<Review>) => Promise<void>;
   markNotificationRead: (id: string) => void;
@@ -991,6 +992,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const refreshVenues = async () => {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase.from('venues').select('*');
+      if (data && !error && data.length > 0) {
+        setVenues(data);
+        localStorage.setItem('rallymax_venues', JSON.stringify(data));
+      }
+    } catch (err) {
+      console.warn('Supabase refreshVenues error:', err);
+    }
+  };
+
   const createVenue = async (venueData: Partial<Venue>): Promise<Venue> => {
     const venueId = generateUuid();
     const newVenue: Venue = {
@@ -1002,7 +1016,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       contact_phone: venueData.contact_phone,
       maps_url: venueData.maps_url,
       price_range: venueData.price_range,
-      created_by: currentUser?.id,
+      created_by: (currentUser?.id && currentUser.id.includes('-')) ? currentUser.id : undefined,
       created_at: new Date().toISOString(),
     };
     setVenues(prev => {
@@ -1013,7 +1027,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (supabase) {
       try {
-        const { error } = await supabase.from('venues').insert([newVenue]);
+        const payload: Record<string, any> = {
+          name: newVenue.name,
+          address: newVenue.address,
+          district_code: newVenue.district_code,
+          total_courts: newVenue.total_courts,
+          contact_phone: newVenue.contact_phone || null,
+          maps_url: newVenue.maps_url || null,
+          price_range: newVenue.price_range || null,
+        };
+        if (newVenue.created_by) {
+          payload.created_by = newVenue.created_by;
+        }
+        const { error } = await supabase.from('venues').insert([payload]);
         if (error) console.warn('Supabase venue insert warning:', error.message);
       } catch (err) {
         console.warn('Supabase venue insert error:', err);
@@ -1032,7 +1058,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (supabase) {
       try {
-        const { error } = await supabase.from('venues').update(venueData).eq('id', venueId);
+        const updatePayload: Record<string, any> = {};
+        if (venueData.name !== undefined) updatePayload.name = venueData.name;
+        if (venueData.address !== undefined) updatePayload.address = venueData.address;
+        if (venueData.district_code !== undefined) updatePayload.district_code = venueData.district_code;
+        if (venueData.total_courts !== undefined) updatePayload.total_courts = venueData.total_courts;
+        if (venueData.contact_phone !== undefined) updatePayload.contact_phone = venueData.contact_phone;
+        if (venueData.maps_url !== undefined) updatePayload.maps_url = venueData.maps_url;
+        if (venueData.price_range !== undefined) updatePayload.price_range = venueData.price_range;
+        const { error } = await supabase.from('venues').update(updatePayload).eq('id', venueId);
         if (error) console.warn('Supabase update venue warning:', error.message);
       } catch (err) {
         console.warn('Supabase update venue error:', err);
@@ -1296,6 +1330,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteUser,
         purgeMockUsers,
         refreshProfiles,
+        refreshVenues,
         updateProfile,
         addReview,
         markNotificationRead,
