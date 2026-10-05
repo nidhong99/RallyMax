@@ -124,7 +124,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             <DropdownMenu
               button={{
                 variant: 'secondary',
-                size: 'sm',
+                size: 'md',
                 label: (
                   <HStack gap={2} style={{ alignItems: 'center' }}>
                     <Avatar
@@ -156,44 +156,55 @@ export const Navigation: React.FC<NavigationProps> = ({
               }}
               hasChevron={true}
               alignment="end"
-              menuWidth={250}
+              menuWidth={280}
               items={[
                 {
+                  icon: (
+                    <Avatar
+                      size="md"
+                      src={currentUser.avatar_url}
+                      name={currentUser.full_name || t('nav.athlete')}
+                    />
+                  ),
                   label: (
-                    <VStack gap={0}>
-                      <Text weight="bold" style={{ fontSize: '13px' }}>
+                    <VStack gap={0} style={{ justifyContent: 'center' }}>
+                      <Text weight="bold" style={{ fontSize: '15px', lineHeight: '1.2' }}>
                         {currentUser.full_name || t('nav.athlete')}
                       </Text>
-                      <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
+                      <Text type="supporting" color="secondary" style={{ fontSize: '13px' }}>
                         {currentUser.email}
                       </Text>
                     </VStack>
                   ),
-                  description: isAdmin
-                    ? t('nav.roleSuperAdmin')
-                    : (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
-                    ? t('nav.roleHost')
-                    : t('nav.rolePlayer'),
-                  icon: isAdmin ? (
-                    <Shield size={16} color="var(--color-icon-accent)" />
-                  ) : (
-                    <User size={16} color="var(--color-icon-secondary)" />
+                  endContent: (
+                    <Badge
+                      variant={(currentUser.reliability_score ?? 100) >= 90 ? 'green' : 'yellow'}
+                      label={`${currentUser.reliability_score ?? 100}%`}
+                    />
                   ),
                 },
                 {
                   type: 'divider' as const,
                 },
                 {
-                  label: t('nav.profile'),
-                  icon: <User size={16} color="var(--color-icon-secondary)" />,
+                  label: (
+                    <Text weight="medium" style={{ fontSize: '15px' }}>
+                      {t('nav.profile')}
+                    </Text>
+                  ),
+                  icon: <User size={20} color="var(--color-icon-secondary)" />,
                   onClick: onOpenProfile,
                 },
                 {
                   type: 'divider' as const,
                 },
                 {
-                  label: t('nav.signOut'),
-                  icon: <LogOut size={16} color="var(--color-destructive)" />,
+                  label: (
+                    <Text weight="medium" style={{ fontSize: '15px', color: 'var(--color-destructive)' }}>
+                      {t('nav.signOut')}
+                    </Text>
+                  ),
+                  icon: <LogOut size={20} color="var(--color-destructive)" />,
                   variant: 'destructive',
                   onClick: logout,
                 },
