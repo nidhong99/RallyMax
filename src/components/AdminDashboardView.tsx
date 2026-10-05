@@ -5,6 +5,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Button } from '@astryxdesign/core/Button';
 import { Badge } from '@astryxdesign/core/Badge';
+import { TabList, Tab } from '@astryxdesign/core/TabList';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout';
@@ -303,40 +304,33 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       </HStack>
 
       {/* 3. Sub-Tab Navigation */}
-      <HStack
-        gap={2}
-        style={{
-          borderBottom: '1px solid var(--color-border)',
-          paddingBottom: 'var(--spacing-2)',
-          width: '100%',
-          overflowX: 'auto',
-        }}
+      <TabList
+        value={activeSubTab}
+        onChange={(val) => setActiveSubTab(val as AdminSubTab)}
+        hasDivider
+        size="md"
       >
-        <Button
-          variant={activeSubTab === 'venues' ? 'primary' : 'ghost'}
-          size="sm"
-          label={`Quản lý Sân bãi (${venues.length})`}
-          onClick={() => setActiveSubTab('venues')}
+        <Tab
+          value="venues"
+          label="Quản lý Sân bãi"
+          endContent={<Badge variant="neutral" label={String(venues.length)} />}
         />
-        <Button
-          variant={activeSubTab === 'users' ? 'primary' : 'ghost'}
-          size="sm"
-          label={`Phân quyền Người dùng (${allUsers.length})`}
-          onClick={() => setActiveSubTab('users')}
+        <Tab
+          value="users"
+          label="Phân quyền Người dùng"
+          endContent={<Badge variant="neutral" label={String(allUsers.length)} />}
         />
-        <Button
-          variant={activeSubTab === 'events' ? 'primary' : 'ghost'}
-          size="sm"
-          label={`Kèo toàn hệ thống (${events.length})`}
-          onClick={() => setActiveSubTab('events')}
+        <Tab
+          value="events"
+          label="Kèo toàn hệ thống"
+          endContent={<Badge variant="neutral" label={String(events.length)} />}
         />
-        <Button
-          variant={activeSubTab === 'reliability' ? 'primary' : 'ghost'}
-          size="sm"
-          label={`Giám sát Uy tín & Khiếu nại (${disputedUsers.length})`}
-          onClick={() => setActiveSubTab('reliability')}
+        <Tab
+          value="reliability"
+          label="Giám sát Uy tín & Khiếu nại"
+          endContent={<Badge variant="neutral" label={String(disputedUsers.length)} />}
         />
-      </HStack>
+      </TabList>
 
       {/* 4. Tab 1: VENUES MANAGEMENT */}
       {activeSubTab === 'venues' && (
@@ -391,8 +385,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   <tr style={{ background: 'var(--color-background-muted)', borderBottom: '1px solid var(--color-border)' }}>
                     <th style={{ padding: 'var(--spacing-3)' }}>Tên sân</th>
                     <th style={{ padding: 'var(--spacing-3)' }}>Địa chỉ</th>
-                    <th style={{ padding: 'var(--spacing-3)' }}>Link vị trí</th>
-                    <th style={{ padding: 'var(--spacing-3)', textAlign: 'right' }}>Thao tác</th>
+                    <th style={{ padding: 'var(--spacing-3)', whiteSpace: 'nowrap', width: '130px' }}>Link vị trí</th>
+                    <th style={{ padding: 'var(--spacing-3)', textAlign: 'right', whiteSpace: 'nowrap', width: '130px' }}>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -422,7 +416,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         <Text>{v.address}</Text>
                       </td>
-                      <td style={{ padding: 'var(--spacing-3)' }}>
+                      <td style={{ padding: 'var(--spacing-3)', whiteSpace: 'nowrap', width: '130px' }}>
                         {v.maps_url ? (
                           <HStack
                             gap={1}
@@ -430,11 +424,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                               alignItems: 'center',
                               cursor: 'pointer',
                               color: 'var(--color-text-accent)',
+                              whiteSpace: 'nowrap',
+                              display: 'inline-flex',
                             }}
                             onClick={() => window.open(v.maps_url, '_blank')}
                           >
-                            <ExternalLink size={12} />
-                            <Text style={{ fontSize: '12px', color: 'inherit', textDecoration: 'underline' }}>
+                            <ExternalLink size={13} style={{ flexShrink: 0 }} />
+                            <Text style={{ fontSize: '13px', color: 'inherit', textDecoration: 'underline', whiteSpace: 'nowrap' }}>
                               Xem vị trí
                             </Text>
                           </HStack>
@@ -444,8 +440,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           </Text>
                         )}
                       </td>
-                      <td style={{ padding: 'var(--spacing-3)', textAlign: 'right' }}>
-                        <HStack gap={1} style={{ justifyContent: 'flex-end' }}>
+                      <td style={{ padding: 'var(--spacing-3)', textAlign: 'right', whiteSpace: 'nowrap', width: '130px' }}>
+                        <HStack gap={1} style={{ justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
                           <Button
                             size="sm"
                             variant="secondary"
