@@ -603,9 +603,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 }}
               >
                 <option value="ALL">Tất cả vai trò</option>
-                <option value="ADMIN">🛡️ Admin</option>
-                <option value="HOST">👑 Host</option>
-                <option value="PLAYER">🏸 Player</option>
+                <option value="ADMIN">Admin</option>
+                <option value="HOST">Host</option>
+                <option value="PLAYER">Player</option>
               </select>
 
               <Button
@@ -691,9 +691,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                             cursor: 'pointer',
                           }}
                         >
-                          <option value="PLAYER">🏸 PLAYER</option>
-                          <option value="HOST">👑 HOST</option>
-                          <option value="ADMIN">🛡️ ADMIN</option>
+                          <option value="PLAYER">PLAYER</option>
+                          <option value="HOST">HOST</option>
+                          <option value="ADMIN">ADMIN</option>
                         </select>
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>

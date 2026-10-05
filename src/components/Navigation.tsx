@@ -6,7 +6,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { DropdownMenu } from '@astryxdesign/core/DropdownMenu';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Badge } from '@astryxdesign/core/Badge';
-import { User, LogOut, Shield, ShieldCheck, Globe, Check } from 'lucide-react';
+import { User, LogOut, Shield, Globe, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -151,10 +151,6 @@ export const Navigation: React.FC<NavigationProps> = ({
                           : t('nav.rolePlayerBadge')
                       }
                     />
-                    <Badge
-                      variant={(currentUser.reliability_score ?? 100) >= 90 ? 'green' : 'yellow'}
-                      label={`${currentUser.reliability_score ?? 100}%`}
-                    />
                   </HStack>
                 ) as any,
               }}
@@ -178,27 +174,17 @@ export const Navigation: React.FC<NavigationProps> = ({
                     : (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
                     ? t('nav.roleHost')
                     : t('nav.rolePlayer'),
-                  icon: <Shield size={16} color="var(--color-icon-accent)" />,
+                  icon: isAdmin ? (
+                    <Shield size={16} color="var(--color-icon-accent)" />
+                  ) : (
+                    <User size={16} color="var(--color-icon-secondary)" />
+                  ),
                 },
-                ...(isAdmin
-                  ? [
-                      {
-                        type: 'divider' as const,
-                      },
-                      {
-                        label: t('nav.adminSystem'),
-                        description: t('nav.adminSystemDesc'),
-                        icon: <ShieldCheck size={16} color="var(--color-icon-accent)" />,
-                        onClick: () => onSelectTab('admin-dashboard'),
-                      },
-                    ]
-                  : []),
                 {
                   type: 'divider' as const,
                 },
                 {
                   label: t('nav.profile'),
-                  description: t('nav.profileDesc'),
                   icon: <User size={16} color="var(--color-icon-secondary)" />,
                   onClick: onOpenProfile,
                 },
@@ -207,7 +193,6 @@ export const Navigation: React.FC<NavigationProps> = ({
                 },
                 {
                   label: t('nav.signOut'),
-                  description: t('nav.signOutDesc'),
                   icon: <LogOut size={16} color="var(--color-destructive)" />,
                   variant: 'destructive',
                   onClick: logout,

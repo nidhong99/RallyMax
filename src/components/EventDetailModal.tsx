@@ -242,7 +242,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                     <VStack gap={0}>
                       <HStack gap={1} style={{ alignItems: 'center' }}>
                         <Text weight="semibold">{event.host?.full_name || 'Host'}</Text>
-                        <Badge variant="purple" label="👑 Host" />
+                        <Badge variant="purple" label="Host" />
                       </HStack>
                       <Text type="supporting" color="secondary">
                         Điểm uy tín: <Text weight="bold" color="accent">{event.host?.reliability_score ?? 100}%</Text> • Đã tổ chức {event.host?.total_matches_played ?? 15}+ trận
