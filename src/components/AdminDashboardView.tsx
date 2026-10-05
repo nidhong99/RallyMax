@@ -10,7 +10,6 @@ import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout';
 import {
   Shield,
-  ShieldCheck,
   Users,
   MapPin,
   Calendar,
@@ -214,82 +213,24 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   return (
     <VStack gap={5} style={{ width: '100%' }}>
-      {/* 1. Header Banner */}
-      <Card
-        style={{
-          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
-          color: '#ffffff',
-          padding: 'var(--spacing-5)',
-          borderRadius: 'var(--radius-container)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-        }}
-      >
-        <HStack gap={3} style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-          <HStack gap={3} style={{ alignItems: 'center' }}>
-            <VStack
-              gap={0}
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: 'var(--radius-element)',
-                background: 'rgba(255, 255, 255, 0.15)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ShieldCheck size={28} color="#a5b4fc" />
-            </VStack>
-            <VStack gap={0}>
-              <HStack gap={2} style={{ alignItems: 'center' }}>
-                <Heading level={2} style={{ color: '#ffffff', margin: 0 }}>
-                  Trung Tâm Quản Trị Hệ Thống (Admin Control)
-                </Heading>
-                <Badge variant="purple" label="Super Admin" />
-              </HStack>
-              <Text style={{ color: '#c7d2fe', fontSize: '13px' }}>
-                Quản lý trực quan cơ sở dữ liệu Supabase: Sân bãi, Người dùng, Kèo đấu & Uy tín
-              </Text>
-            </VStack>
-          </HStack>
-
+      {/* Action toast */}
+      {actionSuccessMsg && (
+        <Card
+          style={{
+            padding: 'var(--spacing-3) var(--spacing-4)',
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            borderRadius: 'var(--radius-element)',
+          }}
+        >
           <HStack gap={2} style={{ alignItems: 'center' }}>
-            <Badge
-              variant={isRealSupabase ? 'green' : 'yellow'}
-              label={isRealSupabase ? '🟢 Supabase Realtime' : '🟡 Local Storage'}
-            />
-            <Button
-              variant="primary"
-              size="sm"
-              label="+ Tạo Kèo Mới (Quyền Host/Admin)"
-              onClick={onOpenCreateEvent}
-              style={{
-                background: 'var(--color-primary)',
-                fontWeight: 600,
-              }}
-            />
-          </HStack>
-        </HStack>
-
-        {/* Action toast */}
-        {actionSuccessMsg && (
-          <HStack
-            gap={2}
-            style={{
-              marginTop: 'var(--spacing-3)',
-              padding: 'var(--spacing-2) var(--spacing-3)',
-              background: 'rgba(16, 185, 129, 0.25)',
-              border: '1px solid rgba(16, 185, 129, 0.5)',
-              borderRadius: 'var(--radius-element)',
-              alignItems: 'center',
-            }}
-          >
-            <CheckCircle2 size={16} color="#34d399" />
-            <Text style={{ color: '#ecfdf5', fontSize: '13px', fontWeight: 500 }}>
+            <CheckCircle2 size={16} color="var(--color-success)" />
+            <Text style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
               {actionSuccessMsg}
             </Text>
           </HStack>
-        )}
-      </Card>
+        </Card>
+      )}
 
       {/* 2. Top KPI Cards */}
       <HStack gap={3} style={{ width: '100%', flexWrap: 'wrap' }}>
