@@ -534,9 +534,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                             } else {
                               setLocationUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.name + ' ' + (selected.address || ''))}`);
                             }
-                            if (selected.total_courts) {
-                              setCourtNumbers(`Sân 1 (Tổng ${selected.total_courts} sân)`);
-                            }
                           }
                         }}
                         defaultValue=""

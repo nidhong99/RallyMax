@@ -75,7 +75,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [venueName, setVenueName] = useState('');
   const [venueAddress, setVenueAddress] = useState('');
   const [venueDistrictCode, setVenueDistrictCode] = useState('HN_BD');
-  const [venueTotalCourts, setVenueTotalCourts] = useState<number>(4);
   const [venueMapsUrl, setVenueMapsUrl] = useState('');
 
   // Status feedback toast / alert
@@ -119,7 +118,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setVenueName('');
     setVenueAddress('');
     setVenueDistrictCode('HN_BD');
-    setVenueTotalCourts(6);
     setVenueMapsUrl('');
     setIsVenueModalOpen(true);
   };
@@ -129,7 +127,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setVenueName(v.name);
     setVenueAddress(v.address);
     setVenueDistrictCode(v.district_code || 'HN_BD');
-    setVenueTotalCourts(v.total_courts);
     setVenueMapsUrl(v.maps_url || '');
     setIsVenueModalOpen(true);
   };
@@ -147,7 +144,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           name: venueName.trim(),
           address: venueAddress.trim(),
           district_code: venueDistrictCode,
-          total_courts: Number(venueTotalCourts) || 1,
           maps_url: venueMapsUrl.trim(),
         });
         showSuccess(`Đã cập nhật thông tin sân "${venueName}" thành công!`);
@@ -156,7 +152,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           name: venueName.trim(),
           address: venueAddress.trim(),
           district_code: venueDistrictCode,
-          total_courts: Number(venueTotalCourts) || 1,
           maps_url: venueMapsUrl.trim(),
         });
         showSuccess(`Đã thêm sân "${venueName}" vào cơ sở dữ liệu!`);
@@ -396,7 +391,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   <tr style={{ background: 'var(--color-background-muted)', borderBottom: '1px solid var(--color-border)' }}>
                     <th style={{ padding: 'var(--spacing-3)' }}>Tên sân</th>
                     <th style={{ padding: 'var(--spacing-3)' }}>Địa chỉ</th>
-                    <th style={{ padding: 'var(--spacing-3)' }}>Quy mô</th>
                     <th style={{ padding: 'var(--spacing-3)' }}>Link vị trí</th>
                     <th style={{ padding: 'var(--spacing-3)', textAlign: 'right' }}>Thao tác</th>
                   </tr>
@@ -427,9 +421,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         <Text>{v.address}</Text>
-                      </td>
-                      <td style={{ padding: 'var(--spacing-3)' }}>
-                        <Badge variant="neutral" label={`${v.total_courts} sân cầu`} />
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         {v.maps_url ? (
@@ -1090,58 +1081,30 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     </VStack>
                   </HStack>
 
-                  {/* Row 3: Total Courts & Link Google Maps */}
-                  <HStack gap={3} style={{ width: '100%' }}>
-                    <VStack gap={1} style={{ flex: 1 }}>
-                      <Text weight="semibold" style={{ fontSize: '13px' }}>
-                        Tổng số thảm / sân <span style={{ color: 'var(--color-destructive, #ef4444)' }}>*</span>
-                      </Text>
-                      <input
-                        type="number"
-                        min={1}
-                        max={50}
-                        required
-                        value={venueTotalCourts}
-                        onChange={(e) => setVenueTotalCourts(Number(e.target.value))}
-                        style={{
-                          padding: 'var(--spacing-2) var(--spacing-3)',
-                          borderRadius: 'var(--radius-element)',
-                          border: '1px solid var(--color-border)',
-                          background: 'var(--color-background-surface)',
-                          color: 'var(--color-text-primary)',
-                          fontSize: '13px',
-                          height: '38px',
-                          width: '100%',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </VStack>
-
-                    <VStack gap={1} style={{ flex: 1 }}>
-                      <Text weight="semibold" style={{ fontSize: '13px' }}>
-                        Link vị trí Google Maps (URL)
-                      </Text>
-                      <input
-                        type="url"
-                        value={venueMapsUrl}
-                        onChange={(e) => setVenueMapsUrl(e.target.value)}
-                        placeholder="https://maps.app.goo.gl/..."
-                        style={{
-                          padding: 'var(--spacing-2) var(--spacing-3)',
-                          borderRadius: 'var(--radius-element)',
-                          border: '1px solid var(--color-border)',
-                          background: 'var(--color-background-surface)',
-                          color: 'var(--color-text-primary)',
-                          fontSize: '13px',
-                          height: '38px',
-                          width: '100%',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </VStack>
-                  </HStack>
+                  {/* Row 3: Link Google Maps */}
+                  <VStack gap={1} style={{ width: '100%' }}>
+                    <Text weight="semibold" style={{ fontSize: '13px' }}>
+                      Link vị trí Google Maps (URL)
+                    </Text>
+                    <input
+                      type="url"
+                      value={venueMapsUrl}
+                      onChange={(e) => setVenueMapsUrl(e.target.value)}
+                      placeholder="https://maps.app.goo.gl/..."
+                      style={{
+                        padding: 'var(--spacing-2) var(--spacing-3)',
+                        borderRadius: 'var(--radius-element)',
+                        border: '1px solid var(--color-border)',
+                        background: 'var(--color-background-surface)',
+                        color: 'var(--color-text-primary)',
+                        fontSize: '13px',
+                        height: '38px',
+                        width: '100%',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </VStack>
 
                   <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
                     💡 Link Google Maps sẽ cho phép các vận động viên bấm trực tiếp để mở ứng dụng Bản đồ dẫn đường tới sân.

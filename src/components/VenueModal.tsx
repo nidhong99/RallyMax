@@ -17,7 +17,6 @@ export const VenueModal: React.FC<VenueModalProps> = ({ isOpen, onClose }) => {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [districtCode, setDistrictCode] = useState('HN_BD');
-  const [courts, setCourts] = useState('6');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +29,6 @@ export const VenueModal: React.FC<VenueModalProps> = ({ isOpen, onClose }) => {
       name,
       address,
       district_code: districtCode,
-      total_courts: Number(courts) || 4,
     });
 
     alert('Đã thêm sân cầu lông vào danh mục!');
@@ -93,42 +91,25 @@ export const VenueModal: React.FC<VenueModalProps> = ({ isOpen, onClose }) => {
               />
             </VStack>
 
-            <HStack gap={2} style={{ width: '100%' }}>
-              <VStack gap={1} style={{ flex: 1 }}>
-                <Text weight="semibold">Quận / Huyện</Text>
-                <select
-                  value={districtCode}
-                  onChange={(e) => setDistrictCode(e.target.value)}
-                  style={{
-                    padding: 'var(--spacing-2)',
-                    borderRadius: 'var(--radius-element)',
-                    border: '1px solid var(--color-border)',
-                    width: '100%',
-                  }}
-                >
-                  {MOCK_DISTRICTS.map((d) => (
-                    <option key={d.code} value={d.code}>
-                      {d.name} ({d.province_code})
-                    </option>
-                  ))}
-                </select>
-              </VStack>
-
-              <VStack gap={1} style={{ width: '140px' }}>
-                <Text weight="semibold">Tổng số thảm/sân</Text>
-                <input
-                  type="number"
-                  value={courts}
-                  onChange={(e) => setCourts(e.target.value)}
-                  style={{
-                    padding: 'var(--spacing-2)',
-                    borderRadius: 'var(--radius-element)',
-                    border: '1px solid var(--color-border)',
-                    width: '100%',
-                  }}
-                />
-              </VStack>
-            </HStack>
+            <VStack gap={1} style={{ width: '100%' }}>
+              <Text weight="semibold">Quận / Huyện</Text>
+              <select
+                value={districtCode}
+                onChange={(e) => setDistrictCode(e.target.value)}
+                style={{
+                  padding: 'var(--spacing-2)',
+                  borderRadius: 'var(--radius-element)',
+                  border: '1px solid var(--color-border)',
+                  width: '100%',
+                }}
+              >
+                {MOCK_DISTRICTS.map((d) => (
+                  <option key={d.code} value={d.code}>
+                    {d.name} ({d.province_code})
+                  </option>
+                ))}
+              </select>
+            </VStack>
 
             <HStack gap={2} style={{ justifyContent: 'flex-end', paddingTop: 'var(--spacing-2)' }}>
               <Button size="md" variant="ghost" label="Hủy" onClick={onClose} />

@@ -345,7 +345,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     name: ev.venue_name || 'Sân cầu lông',
                     address: ev.location_url || 'Đang cập nhật địa chỉ',
                     district_code: 'HN_BD',
-                    total_courts: 4,
                   },
                   host: ev.host,
                   registrations: ev.registrations || [],
@@ -749,7 +748,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       name: venueName,
       address: eventData.location_url || 'Đang cập nhật địa chỉ',
       district_code: 'HN_BD',
-      total_courts: 4,
     };
 
     const newEvent: Event = {
@@ -1045,7 +1043,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       name: venueData.name || 'Sân Cầu Lông Mới',
       address: venueData.address || '',
       district_code: venueData.district_code || 'HN_BD',
-      total_courts: Number(venueData.total_courts) || 4,
       contact_phone: venueData.contact_phone,
       maps_url: venueData.maps_url,
       price_range: venueData.price_range,
@@ -1059,7 +1056,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         name: newVenue.name,
         address: newVenue.address,
         district_code: newVenue.district_code,
-        total_courts: newVenue.total_courts,
         maps_url: newVenue.maps_url || null,
       };
       if (newVenue.contact_phone) payload.contact_phone = newVenue.contact_phone;
@@ -1092,7 +1088,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (venueData.name !== undefined) updatePayload.name = venueData.name;
       if (venueData.address !== undefined) updatePayload.address = venueData.address;
       if (venueData.district_code !== undefined) updatePayload.district_code = venueData.district_code;
-      if (venueData.total_courts !== undefined) updatePayload.total_courts = Number(venueData.total_courts) || 1;
       if (venueData.contact_phone !== undefined) updatePayload.contact_phone = venueData.contact_phone || null;
       if (venueData.maps_url !== undefined) updatePayload.maps_url = venueData.maps_url || null;
       if (venueData.price_range !== undefined) updatePayload.price_range = venueData.price_range || null;

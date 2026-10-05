@@ -35,7 +35,6 @@ export const VenuesView: React.FC<VenuesViewProps> = ({ onOpenAddVenue }) => {
           <TableRow>
             <TableHeaderCell>Tên sân</TableHeaderCell>
             <TableHeaderCell>Địa chỉ</TableHeaderCell>
-            <TableHeaderCell>Quy mô</TableHeaderCell>
             <TableHeaderCell>Số kèo đang tổ chức</TableHeaderCell>
           </TableRow>
         </TableHeader>
@@ -53,9 +52,6 @@ export const VenuesView: React.FC<VenuesViewProps> = ({ onOpenAddVenue }) => {
                 </TableCell>
                 <TableCell>
                   <Text>{venue.address}</Text>
-                </TableCell>
-                <TableCell>
-                  <Text>{venue.total_courts} thảm tiêu chuẩn</Text>
                 </TableCell>
                 <TableCell>
                   <Text weight="bold" color={eventCount > 0 ? 'accent' : 'secondary'}>
