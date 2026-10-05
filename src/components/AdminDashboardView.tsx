@@ -6,6 +6,7 @@ import { Heading } from '@astryxdesign/core/Heading';
 import { Button } from '@astryxdesign/core/Button';
 import { Badge } from '@astryxdesign/core/Badge';
 import { TabList, Tab } from '@astryxdesign/core/TabList';
+import { Pagination } from '@astryxdesign/core/Pagination';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout';
@@ -69,6 +70,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [userRoleFilter, setUserRoleFilter] = useState<'ALL' | UserRole>('ALL');
   const [eventSearch, setEventSearch] = useState('');
   const [eventStatusFilter, setEventStatusFilter] = useState<string>('ALL');
+
+  // Pagination states
+  const [venuePage, setVenuePage] = useState(1);
+  const [venuePageSize, setVenuePageSize] = useState(10);
+  const [userPage, setUserPage] = useState(1);
+  const [userPageSize, setUserPageSize] = useState(10);
+  const [eventPage, setEventPage] = useState(1);
+  const [eventPageSize, setEventPageSize] = useState(10);
+  const [disputePage, setDisputePage] = useState(1);
+  const [disputePageSize, setDisputePageSize] = useState(10);
 
   // Venue Add / Edit Modal state
   const [isVenueModalOpen, setIsVenueModalOpen] = useState(false);
@@ -206,6 +217,27 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   });
 
   const disputedUsers = allUsers.filter(u => (u.reliability_score ?? 100) < 95 || (u.no_show_count ?? 0) > 0);
+
+  // Paginated slices
+  const venueTotal = filteredVenues.length;
+  const safeVenuePage = Math.min(venuePage, Math.max(1, Math.ceil(venueTotal / venuePageSize)));
+  const venueStartIdx = (safeVenuePage - 1) * venuePageSize;
+  const paginatedVenues = filteredVenues.slice(venueStartIdx, venueStartIdx + venuePageSize);
+
+  const userTotal = filteredUsers.length;
+  const safeUserPage = Math.min(userPage, Math.max(1, Math.ceil(userTotal / userPageSize)));
+  const userStartIdx = (safeUserPage - 1) * userPageSize;
+  const paginatedUsers = filteredUsers.slice(userStartIdx, userStartIdx + userPageSize);
+
+  const eventTotal = filteredEvents.length;
+  const safeEventPage = Math.min(eventPage, Math.max(1, Math.ceil(eventTotal / eventPageSize)));
+  const eventStartIdx = (safeEventPage - 1) * eventPageSize;
+  const paginatedEvents = filteredEvents.slice(eventStartIdx, eventStartIdx + eventPageSize);
+
+  const disputeTotal = disputedUsers.length;
+  const safeDisputePage = Math.min(disputePage, Math.max(1, Math.ceil(disputeTotal / disputePageSize)));
+  const disputeStartIdx = (safeDisputePage - 1) * disputePageSize;
+  const paginatedDisputes = disputedUsers.slice(disputeStartIdx, disputeStartIdx + disputePageSize);
 
   return (
     <VStack gap={5} style={{ width: '100%' }}>
@@ -353,7 +385,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 type="text"
                 placeholder="Tìm kiếm sân theo tên, quận, địa chỉ..."
                 value={venueSearch}
-                onChange={(e) => setVenueSearch(e.target.value)}
+                onChange={(e) => {
+                  setVenueSearch(e.target.value);
+                  setVenuePage(1);
+                }}
                 style={{
                   border: 'none',
                   outline: 'none',
@@ -390,7 +425,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredVenues.map((v) => (
+                  {paginatedVenues.map((v) => (
                     <tr
                       key={v.id}
                       style={{
@@ -461,6 +496,38 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </tbody>
               </table>
             )}
+
+            {/* Pagination footer */}
+            {venueTotal > 0 && (
+              <HStack
+                gap={2}
+                style={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--spacing-3) var(--spacing-4)',
+                  borderTop: '1px solid var(--color-border)',
+                  background: 'var(--color-background-surface)',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Text type="supporting" color="secondary" style={{ fontSize: '13px' }}>
+                  Hiển thị {venueStartIdx + 1} - {Math.min(venueStartIdx + venuePageSize, venueTotal)} trong {venueTotal} sân
+                </Text>
+                <Pagination
+                  page={safeVenuePage}
+                  onChange={setVenuePage}
+                  totalItems={venueTotal}
+                  pageSize={venuePageSize}
+                  onPageSizeChange={(newSize) => {
+                    setVenuePageSize(newSize);
+                    setVenuePage(1);
+                  }}
+                  pageSizeOptions={[10, 20, 50]}
+                  variant="pages"
+                  size="sm"
+                />
+              </HStack>
+            )}
           </Card>
         </VStack>
       )}
@@ -486,7 +553,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 type="text"
                 placeholder="Tìm người dùng theo tên hoặc email..."
                 value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
+                onChange={(e) => {
+                  setUserSearch(e.target.value);
+                  setUserPage(1);
+                }}
                 style={{
                   border: 'none',
                   outline: 'none',
@@ -501,7 +571,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <Text type="supporting" weight="medium">Lọc vai trò:</Text>
               <select
                 value={userRoleFilter}
-                onChange={(e) => setUserRoleFilter(e.target.value as any)}
+                onChange={(e) => {
+                  setUserRoleFilter(e.target.value as any);
+                  setUserPage(1);
+                }}
                 style={{
                   padding: 'var(--spacing-1) var(--spacing-2)',
                   borderRadius: 'var(--radius-element)',
@@ -543,7 +616,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((u) => {
+                {paginatedUsers.map((u) => {
                   const isCurrentAdmin = (u.email || '').toLowerCase() === 'nidhong99@gmail.com';
                   const displayRole: UserRole = u.role || (isCurrentAdmin ? 'ADMIN' : 'PLAYER');
                   const score = u.reliability_score ?? 100;
@@ -692,6 +765,38 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 })}
               </tbody>
             </table>
+
+            {/* Users Pagination footer */}
+            {userTotal > 0 && (
+              <HStack
+                gap={2}
+                style={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--spacing-3) var(--spacing-4)',
+                  borderTop: '1px solid var(--color-border)',
+                  background: 'var(--color-background-surface)',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Text type="supporting" color="secondary" style={{ fontSize: '13px' }}>
+                  Hiển thị {userStartIdx + 1} - {Math.min(userStartIdx + userPageSize, userTotal)} trong {userTotal} người dùng
+                </Text>
+                <Pagination
+                  page={safeUserPage}
+                  onChange={setUserPage}
+                  totalItems={userTotal}
+                  pageSize={userPageSize}
+                  onPageSizeChange={(newSize) => {
+                    setUserPageSize(newSize);
+                    setUserPage(1);
+                  }}
+                  pageSizeOptions={[10, 20, 50]}
+                  variant="pages"
+                  size="sm"
+                />
+              </HStack>
+            )}
           </Card>
         </VStack>
       )}
@@ -716,7 +821,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 type="text"
                 placeholder="Tìm kèo theo tên hoặc sân..."
                 value={eventSearch}
-                onChange={(e) => setEventSearch(e.target.value)}
+                onChange={(e) => {
+                  setEventSearch(e.target.value);
+                  setEventPage(1);
+                }}
                 style={{
                   border: 'none',
                   outline: 'none',
@@ -731,7 +839,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <Text type="supporting" weight="medium">Trạng thái:</Text>
               <select
                 value={eventStatusFilter}
-                onChange={(e) => setEventStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  setEventStatusFilter(e.target.value);
+                  setEventPage(1);
+                }}
                 style={{
                   padding: 'var(--spacing-1) var(--spacing-2)',
                   borderRadius: 'var(--radius-element)',
@@ -763,7 +874,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {filteredEvents.map((evt) => {
+                {paginatedEvents.map((evt) => {
                   const regCount = evt.registrations?.filter(r => r.status === 'APPROVED').length ?? 0;
                   return (
                     <tr key={evt.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -865,6 +976,38 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 })}
               </tbody>
             </table>
+
+            {/* Events Pagination footer */}
+            {eventTotal > 0 && (
+              <HStack
+                gap={2}
+                style={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--spacing-3) var(--spacing-4)',
+                  borderTop: '1px solid var(--color-border)',
+                  background: 'var(--color-background-surface)',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Text type="supporting" color="secondary" style={{ fontSize: '13px' }}>
+                  Hiển thị {eventStartIdx + 1} - {Math.min(eventStartIdx + eventPageSize, eventTotal)} trong {eventTotal} kèo
+                </Text>
+                <Pagination
+                  page={safeEventPage}
+                  onChange={setEventPage}
+                  totalItems={eventTotal}
+                  pageSize={eventPageSize}
+                  onPageSizeChange={(newSize) => {
+                    setEventPageSize(newSize);
+                    setEventPage(1);
+                  }}
+                  pageSizeOptions={[10, 20, 50]}
+                  variant="pages"
+                  size="sm"
+                />
+              </HStack>
+            )}
           </Card>
         </VStack>
       )}
@@ -912,7 +1055,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {disputedUsers.map((u) => (
+                  {paginatedDisputes.map((u) => (
                     <tr key={u.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         <HStack gap={2} style={{ alignItems: 'center' }}>
@@ -955,6 +1098,38 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   ))}
                 </tbody>
               </table>
+            )}
+
+            {/* Disputes Pagination footer */}
+            {disputeTotal > 0 && (
+              <HStack
+                gap={2}
+                style={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--spacing-3) var(--spacing-4)',
+                  borderTop: '1px solid var(--color-border)',
+                  background: 'var(--color-background-surface)',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Text type="supporting" color="secondary" style={{ fontSize: '13px' }}>
+                  Hiển thị {disputeStartIdx + 1} - {Math.min(disputeStartIdx + disputePageSize, disputeTotal)} trong {disputeTotal} tài khoản
+                </Text>
+                <Pagination
+                  page={safeDisputePage}
+                  onChange={setDisputePage}
+                  totalItems={disputeTotal}
+                  pageSize={disputePageSize}
+                  onPageSizeChange={(newSize) => {
+                    setDisputePageSize(newSize);
+                    setDisputePage(1);
+                  }}
+                  pageSizeOptions={[10, 20, 50]}
+                  variant="pages"
+                  size="sm"
+                />
+              </HStack>
             )}
           </Card>
         </VStack>

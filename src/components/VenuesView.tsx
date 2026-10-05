@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '@astryxdesign/core/Table';
+import { Pagination } from '@astryxdesign/core/Pagination';
 import { useApp } from '../context/AppContext';
 import { MapPin, Plus } from 'lucide-react';
 
@@ -13,6 +14,14 @@ interface VenuesViewProps {
 
 export const VenuesView: React.FC<VenuesViewProps> = ({ onOpenAddVenue }) => {
   const { venues, events } = useApp();
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const totalItems = venues.length;
+  const safePage = Math.min(page, Math.max(1, Math.ceil(totalItems / pageSize)));
+  const startIdx = (safePage - 1) * pageSize;
+  const paginatedVenues = venues.slice(startIdx, startIdx + pageSize);
 
   return (
     <VStack gap={4} style={{ width: '100%' }}>
@@ -39,7 +48,7 @@ export const VenuesView: React.FC<VenuesViewProps> = ({ onOpenAddVenue }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {venues.map((venue) => {
+          {paginatedVenues.map((venue) => {
             const eventCount = events.filter((e) => e.venue_id === venue.id && e.status === 'OPEN').length;
 
             return (
@@ -63,6 +72,35 @@ export const VenuesView: React.FC<VenuesViewProps> = ({ onOpenAddVenue }) => {
           })}
         </TableBody>
       </Table>
+
+      {totalItems > 0 && (
+        <HStack
+          gap={2}
+          style={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: 'var(--spacing-3) 0',
+            flexWrap: 'wrap',
+          }}
+        >
+          <Text type="supporting" color="secondary" style={{ fontSize: '13px' }}>
+            Hiển thị {startIdx + 1} - {Math.min(startIdx + pageSize, totalItems)} trong tổng số {totalItems} sân
+          </Text>
+          <Pagination
+            page={safePage}
+            onChange={setPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={[10, 20, 50]}
+            variant="pages"
+            size="sm"
+          />
+        </HStack>
+      )}
     </VStack>
   );
 };

@@ -5,6 +5,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '@astryxdesign/core/Table';
+import { Pagination } from '@astryxdesign/core/Pagination';
 import { Event } from '../types/database';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -31,6 +32,12 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
 
   const [subTab, setSubTab] = useState<'hosting' | 'joining'>(() => (isHost ? 'hosting' : 'joining'));
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'CHECKED_IN' | 'CANCELLED'>('ALL');
+
+  // Pagination states
+  const [hostedPage, setHostedPage] = useState(1);
+  const [hostedPageSize, setHostedPageSize] = useState(10);
+  const [joinedPage, setJoinedPage] = useState(1);
+  const [joinedPageSize, setJoinedPageSize] = useState(10);
 
   // Automatically switch subTab when user logs in/out or switches roles
   useEffect(() => {
@@ -87,6 +94,17 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
         (r.status === 'CANCELLED' || r.status === 'REJECTED' || r.status === 'NO_SHOW')
     )
   ).length;
+
+  // Paginated slices
+  const hostedTotal = hostedEvents.length;
+  const safeHostedPage = Math.min(hostedPage, Math.max(1, Math.ceil(hostedTotal / hostedPageSize)));
+  const hostedStartIdx = (safeHostedPage - 1) * hostedPageSize;
+  const paginatedHostedEvents = hostedEvents.slice(hostedStartIdx, hostedStartIdx + hostedPageSize);
+
+  const joinedTotal = filteredJoinedEvents.length;
+  const safeJoinedPage = Math.min(joinedPage, Math.max(1, Math.ceil(joinedTotal / joinedPageSize)));
+  const joinedStartIdx = (safeJoinedPage - 1) * joinedPageSize;
+  const paginatedJoinedEvents = filteredJoinedEvents.slice(joinedStartIdx, joinedStartIdx + joinedPageSize);
 
   const handleCancel = async (ev: Event) => {
     const confirmMsg = language === 'vi'
@@ -162,7 +180,8 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
               />
             </VStack>
           ) : (
-            <Table>
+            <>
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHeaderCell>{language === 'vi' ? 'Tên buổi chơi & Thời gian' : 'Session & Time'}</TableHeaderCell>
@@ -173,7 +192,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {hostedEvents.map((ev) => {
+                {paginatedHostedEvents.map((ev) => {
                   const regs = ev.registrations || [];
                   const evPendingCount = regs.filter((r) => r.status === 'PENDING').length;
                   const evApprovedCount = regs.filter((r) => r.status === 'APPROVED' || r.status === 'CHECKED_IN').length;
@@ -237,7 +256,40 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                 })}
               </TableBody>
             </Table>
-          )}
+
+            {/* Hosted Events Pagination */}
+            {hostedTotal > 0 && (
+              <HStack
+                gap={2}
+                style={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--spacing-3) 0',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Text type="supporting" color="secondary" style={{ fontSize: '13px' }}>
+                  {language === 'vi'
+                    ? `Hiển thị ${hostedStartIdx + 1} - ${Math.min(hostedStartIdx + hostedPageSize, hostedTotal)} trong ${hostedTotal} kèo`
+                    : `Showing ${hostedStartIdx + 1} - ${Math.min(hostedStartIdx + hostedPageSize, hostedTotal)} of ${hostedTotal} events`}
+                </Text>
+                <Pagination
+                  page={safeHostedPage}
+                  onChange={setHostedPage}
+                  totalItems={hostedTotal}
+                  pageSize={hostedPageSize}
+                  onPageSizeChange={(newSize) => {
+                    setHostedPageSize(newSize);
+                    setHostedPage(1);
+                  }}
+                  pageSizeOptions={[10, 20, 50]}
+                  variant="pages"
+                  size="sm"
+                />
+              </HStack>
+            )}
+          </>
+        )}
         </VStack>
       )}
 
@@ -315,7 +367,8 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
               )}
             </VStack>
           ) : (
-            <Table>
+            <>
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHeaderCell>{language === 'vi' ? 'Sự kiện & Thời gian' : 'Session & Time'}</TableHeaderCell>
@@ -328,7 +381,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredJoinedEvents.map((ev) => {
+                {paginatedJoinedEvents.map((ev) => {
                   const reg = (ev.registrations || []).find((r) => r.player_id === currentUser?.id);
                   const startDate = new Date(ev.start_time);
                   const timeDisplay = `${startDate.toLocaleDateString(dateLocale, { weekday: 'short', day: '2-digit', month: '2-digit' })} • ${startDate.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })}`;
@@ -464,7 +517,40 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                 })}
               </TableBody>
             </Table>
-          )}
+
+            {/* Joined Events Pagination */}
+            {joinedTotal > 0 && (
+              <HStack
+                gap={2}
+                style={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--spacing-3) 0',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Text type="supporting" color="secondary" style={{ fontSize: '13px' }}>
+                  {language === 'vi'
+                    ? `Hiển thị ${joinedStartIdx + 1} - ${Math.min(joinedStartIdx + joinedPageSize, joinedTotal)} trong ${joinedTotal} lượt tham gia`
+                    : `Showing ${joinedStartIdx + 1} - ${Math.min(joinedStartIdx + joinedPageSize, joinedTotal)} of ${joinedTotal} registrations`}
+                </Text>
+                <Pagination
+                  page={safeJoinedPage}
+                  onChange={setJoinedPage}
+                  totalItems={joinedTotal}
+                  pageSize={joinedPageSize}
+                  onPageSizeChange={(newSize) => {
+                    setJoinedPageSize(newSize);
+                    setJoinedPage(1);
+                  }}
+                  pageSizeOptions={[10, 20, 50]}
+                  variant="pages"
+                  size="sm"
+                />
+              </HStack>
+            )}
+          </>
+        )}
         </VStack>
       )}
     </VStack>
