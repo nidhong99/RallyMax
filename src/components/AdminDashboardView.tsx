@@ -488,7 +488,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         <Text>{v.address}</Text>
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
-                        <Badge variant="blue" label={`${v.total_courts} sân cầu`} />
+                        <Badge variant="neutral" label={`${v.total_courts} sân cầu`} />
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         {v.maps_url ? (
