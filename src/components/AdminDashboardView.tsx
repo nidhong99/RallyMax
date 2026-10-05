@@ -78,8 +78,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [venueDistrictCode, setVenueDistrictCode] = useState('HN_BD');
   const [venueTotalCourts, setVenueTotalCourts] = useState<number>(4);
   const [venueMapsUrl, setVenueMapsUrl] = useState('');
-  const [venuePhone, setVenuePhone] = useState('');
-  const [venuePriceRange, setVenuePriceRange] = useState('');
 
   // Status feedback toast / alert
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
@@ -124,8 +122,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setVenueDistrictCode('HN_BD');
     setVenueTotalCourts(6);
     setVenueMapsUrl('');
-    setVenuePhone('');
-    setVenuePriceRange('70.000đ - 120.000đ/giờ');
     setIsVenueModalOpen(true);
   };
 
@@ -136,8 +132,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setVenueDistrictCode(v.district_code || 'HN_BD');
     setVenueTotalCourts(v.total_courts);
     setVenueMapsUrl(v.maps_url || '');
-    setVenuePhone(v.contact_phone || '');
-    setVenuePriceRange(v.price_range || '');
     setIsVenueModalOpen(true);
   };
 
@@ -156,8 +150,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           district_code: venueDistrictCode,
           total_courts: Number(venueTotalCourts) || 1,
           maps_url: venueMapsUrl.trim(),
-          contact_phone: venuePhone.trim(),
-          price_range: venuePriceRange.trim(),
         });
         showSuccess(`Đã cập nhật thông tin sân "${venueName}" thành công!`);
       } else {
@@ -167,8 +159,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           district_code: venueDistrictCode,
           total_courts: Number(venueTotalCourts) || 1,
           maps_url: venueMapsUrl.trim(),
-          contact_phone: venuePhone.trim(),
-          price_range: venuePriceRange.trim(),
         });
         showSuccess(`Đã thêm sân "${venueName}" vào cơ sở dữ liệu!`);
       }
@@ -464,9 +454,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <thead>
                   <tr style={{ background: 'var(--color-background-muted)', borderBottom: '1px solid var(--color-border)' }}>
                     <th style={{ padding: 'var(--spacing-3)' }}>Tên sân</th>
-                    <th style={{ padding: 'var(--spacing-3)' }}>Địa chỉ & Maps</th>
+                    <th style={{ padding: 'var(--spacing-3)' }}>Địa chỉ</th>
                     <th style={{ padding: 'var(--spacing-3)' }}>Quy mô</th>
-                    <th style={{ padding: 'var(--spacing-3)' }}>Giá tham khảo</th>
+                    <th style={{ padding: 'var(--spacing-3)' }}>Link vị trí</th>
                     <th style={{ padding: 'var(--spacing-3)', textAlign: 'right' }}>Thao tác</th>
                   </tr>
                 </thead>
@@ -495,42 +485,32 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         </VStack>
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
-                        <VStack gap={0}>
-                          <Text>{v.address}</Text>
-                          {v.maps_url ? (
-                            <HStack
-                              gap={1}
-                              style={{
-                                alignItems: 'center',
-                                cursor: 'pointer',
-                                color: 'var(--color-text-accent)',
-                              }}
-                              onClick={() => window.open(v.maps_url, '_blank')}
-                            >
-                              <ExternalLink size={12} />
-                              <Text style={{ fontSize: '11px', color: 'inherit' }}>
-                                Xem vị trí trên Google Maps
-                              </Text>
-                            </HStack>
-                          ) : (
-                            <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
-                              Chưa có link Maps
-                            </Text>
-                          )}
-                        </VStack>
+                        <Text>{v.address}</Text>
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         <Badge variant="blue" label={`${v.total_courts} sân cầu`} />
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
-                        <VStack gap={0}>
-                          <Text weight="medium">{v.price_range || '60.000đ - 100.000đ/h'}</Text>
-                          {v.contact_phone && (
-                            <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
-                              📞 {v.contact_phone}
+                        {v.maps_url ? (
+                          <HStack
+                            gap={1}
+                            style={{
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              color: 'var(--color-text-accent)',
+                            }}
+                            onClick={() => window.open(v.maps_url, '_blank')}
+                          >
+                            <ExternalLink size={12} />
+                            <Text style={{ fontSize: '12px', color: 'inherit', textDecoration: 'underline' }}>
+                              Xem vị trí
                             </Text>
-                          )}
-                        </VStack>
+                          </HStack>
+                        ) : (
+                          <Text type="supporting" color="secondary" style={{ fontSize: '12px' }}>
+                            —
+                          </Text>
+                        )}
                       </td>
                       <td style={{ padding: 'var(--spacing-3)', textAlign: 'right' }}>
                         <HStack gap={1} style={{ justifyContent: 'flex-end' }}>
@@ -1169,7 +1149,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     </VStack>
                   </HStack>
 
-                  {/* Row 3: Quy mô sân & Giá tham khảo */}
+                  {/* Row 3: Total Courts & Link Google Maps */}
                   <HStack gap={3} style={{ width: '100%' }}>
                     <VStack gap={1} style={{ flex: 1 }}>
                       <Text weight="semibold" style={{ fontSize: '13px' }}>
@@ -1182,57 +1162,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         required
                         value={venueTotalCourts}
                         onChange={(e) => setVenueTotalCourts(Number(e.target.value))}
-                        style={{
-                          padding: 'var(--spacing-2) var(--spacing-3)',
-                          borderRadius: 'var(--radius-element)',
-                          border: '1px solid var(--color-border)',
-                          background: 'var(--color-background-surface)',
-                          color: 'var(--color-text-primary)',
-                          fontSize: '13px',
-                          height: '38px',
-                          width: '100%',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </VStack>
-
-                    <VStack gap={1} style={{ flex: 1 }}>
-                      <Text weight="semibold" style={{ fontSize: '13px' }}>
-                        Giá thuê tham khảo / giờ
-                      </Text>
-                      <input
-                        type="text"
-                        value={venuePriceRange}
-                        onChange={(e) => setVenuePriceRange(e.target.value)}
-                        placeholder="Ví dụ: 80.000đ - 120.000đ / giờ"
-                        style={{
-                          padding: 'var(--spacing-2) var(--spacing-3)',
-                          borderRadius: 'var(--radius-element)',
-                          border: '1px solid var(--color-border)',
-                          background: 'var(--color-background-surface)',
-                          color: 'var(--color-text-primary)',
-                          fontSize: '13px',
-                          height: '38px',
-                          width: '100%',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </VStack>
-                  </HStack>
-
-                  {/* Row 4: Hotline & Link Google Maps */}
-                  <HStack gap={3} style={{ width: '100%' }}>
-                    <VStack gap={1} style={{ flex: 1 }}>
-                      <Text weight="semibold" style={{ fontSize: '13px' }}>
-                        Số điện thoại đặt sân
-                      </Text>
-                      <input
-                        type="tel"
-                        value={venuePhone}
-                        onChange={(e) => setVenuePhone(e.target.value)}
-                        placeholder="0912 345 678"
                         style={{
                           padding: 'var(--spacing-2) var(--spacing-3)',
                           borderRadius: 'var(--radius-element)',

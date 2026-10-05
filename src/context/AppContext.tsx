@@ -1060,10 +1060,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         address: newVenue.address,
         district_code: newVenue.district_code,
         total_courts: newVenue.total_courts,
-        contact_phone: newVenue.contact_phone || null,
         maps_url: newVenue.maps_url || null,
-        price_range: newVenue.price_range || null,
       };
+      if (newVenue.contact_phone) payload.contact_phone = newVenue.contact_phone;
+      if (newVenue.price_range) payload.price_range = newVenue.price_range;
       if (newVenue.created_by) {
         payload.created_by = newVenue.created_by;
       }
