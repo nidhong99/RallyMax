@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Profile, Event, Venue, EventRegistration, RegistrationStatus, Review, Notification } from '../types/database';
-import { MOCK_PROFILES, MOCK_EVENTS, MOCK_VENUES, MOCK_REVIEWS } from '../data/mockData';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface AppContextType {
@@ -83,7 +82,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [allUsers, setAllUsers] = useState<Profile[]>(() => {
     const saved = localStorage.getItem('rallymax_users');
-    let list: Profile[] = saved ? JSON.parse(saved) : MOCK_PROFILES;
+    let list: Profile[] = saved ? JSON.parse(saved) : [];
     // Permanently purge mock users
     list = list.filter(u => !isMockEmail(u.email) && !isMockId(u.id));
     localStorage.setItem('rallymax_users', JSON.stringify(list));
@@ -106,7 +105,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (savedUserId === 'guest') return null;
     if (savedUserId) {
       const savedUsersStr = localStorage.getItem('rallymax_users');
-      const usersList: Profile[] = savedUsersStr ? JSON.parse(savedUsersStr) : MOCK_PROFILES;
+      const usersList: Profile[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
       const found = usersList.find(u => u.id === savedUserId);
       if (found) return found;
     }
@@ -133,7 +132,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [venues, setVenues] = useState<Venue[]>(() => {
     const saved = localStorage.getItem('rallymax_venues');
-    return saved ? JSON.parse(saved) : MOCK_VENUES;
+    if (saved) {
+      try {
+        const parsed: Venue[] = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(v => v && !v.id.startsWith('venue-'));
+        }
+      } catch (e) {
+        console.warn('Error parsing venues:', e);
+      }
+    }
+    return [];
   });
 
   const [events, setEvents] = useState<Event[]>(() => {
@@ -154,7 +163,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [reviews, setReviews] = useState<Review[]>(() => {
     const saved = localStorage.getItem('rallymax_reviews');
-    return saved ? JSON.parse(saved) : MOCK_REVIEWS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [notifications, setNotifications] = useState<Notification[]>([

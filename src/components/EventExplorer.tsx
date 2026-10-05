@@ -7,7 +7,7 @@ import { EventCard } from './EventCard';
 import { Event, SKILL_LABELS } from '../types/database';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
-import { MOCK_DISTRICTS } from '../data/mockData';
+import { DISTRICTS } from '../constants/locations';
 
 interface EventExplorerProps {
   onSelectEvent: (event: Event) => void;
@@ -120,7 +120,7 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
             }}
           >
             <option value="ALL">{t('explorer.allDistricts')}</option>
-            {MOCK_DISTRICTS.map((d) => (
+            {DISTRICTS.map((d) => (
               <option key={d.code} value={d.code}>
                 {d.name} ({d.province_code})
               </option>

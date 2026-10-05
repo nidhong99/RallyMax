@@ -6,7 +6,7 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { useApp } from '../context/AppContext';
 import { SkillLevel, DominantHand, PlayStyle, SKILL_LABELS, PLAY_STYLE_LABELS } from '../types/database';
-import { MOCK_DISTRICTS } from '../data/mockData';
+import { DISTRICTS } from '../constants/locations';
 import { Shield, Star } from 'lucide-react';
 
 interface ProfileModalProps {
@@ -258,7 +258,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                       width: '100%',
                     }}
                   >
-                    {MOCK_DISTRICTS.map((d) => (
+                    {DISTRICTS.map((d) => (
                       <option key={d.code} value={d.code}>
                         {d.name} ({d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'TP.HCM' : 'Đà Nẵng'})
                       </option>

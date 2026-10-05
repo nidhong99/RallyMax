@@ -4,7 +4,7 @@ import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { useApp } from '../context/AppContext';
-import { MOCK_DISTRICTS } from '../data/mockData';
+import { DISTRICTS } from '../constants/locations';
 
 interface VenueModalProps {
   isOpen: boolean;
@@ -103,9 +103,9 @@ export const VenueModal: React.FC<VenueModalProps> = ({ isOpen, onClose }) => {
                   width: '100%',
                 }}
               >
-                {MOCK_DISTRICTS.map((d) => (
+                {DISTRICTS.map((d) => (
                   <option key={d.code} value={d.code}>
-                    {d.name} ({d.province_code})
+                    {d.name} ({d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'TP.HCM' : 'Đà Nẵng'})
                   </option>
                 ))}
               </select>

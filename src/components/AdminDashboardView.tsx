@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Venue, Event, Profile, UserRole } from '../types/database';
-import { MOCK_DISTRICTS } from '../data/mockData';
+import { DISTRICTS } from '../constants/locations';
 
 interface AdminDashboardViewProps {
   onSelectEvent: (event: Event) => void;
@@ -176,7 +176,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Filtered lists
   const filteredVenues = venues.filter(v => {
-    const d = MOCK_DISTRICTS.find(item => item.code === v.district_code);
+    const d = DISTRICTS.find(item => item.code === v.district_code);
     const dName = d ? d.name : (v.district || '');
     const cityName = d ? (d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'Hồ Chí Minh' : 'Đà Nẵng') : (v.city || '');
     return (
@@ -409,7 +409,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           <Text weight="bold">{v.name}</Text>
                           <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
                             {(() => {
-                              const d = MOCK_DISTRICTS.find(item => item.code === v.district_code);
+                              const d = DISTRICTS.find(item => item.code === v.district_code);
                               if (d) {
                                 const cityName = d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'TP.HCM' : 'Đà Nẵng';
                                 return `${d.name}, ${cityName}`;
@@ -1072,7 +1072,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           boxSizing: 'border-box',
                         }}
                       >
-                        {MOCK_DISTRICTS.map((d) => (
+                        {DISTRICTS.map((d) => (
                           <option key={d.code} value={d.code}>
                             {d.name} ({d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'TP.HCM' : 'Đà Nẵng'})
                           </option>
