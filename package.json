@@ -32,5 +32,11 @@
     "@vitejs/plugin-react": "^6.1.1",
     "typescript": "^7.0.2",
     "vite": "^8.2.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@astryxdesign/cli",
+      "@astryxdesign/core"
+    ]
   }
 }
