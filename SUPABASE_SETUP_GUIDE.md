@@ -167,6 +167,8 @@ CREATE TABLE IF NOT EXISTS public.venues (
     district_code VARCHAR(10) NOT NULL REFERENCES public.districts(code) ON DELETE RESTRICT,
     latitude NUMERIC(9,6),
     longitude NUMERIC(9,6),
+    maps_url TEXT,
+    image_url TEXT,
     created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT uq_venue_name_address UNIQUE (name, address)

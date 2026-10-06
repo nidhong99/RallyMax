@@ -84,7 +84,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
         }}
       >
         <img
-          src={event.cover_image_url || DEFAULT_EVENT_COVER}
+          src={event.cover_image_url || event.venue?.image_url || DEFAULT_EVENT_COVER}
           alt={event.title}
           style={{
             width: '100%',

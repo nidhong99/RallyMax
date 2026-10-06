@@ -1054,6 +1054,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       district_code: venueData.district_code || 'HN_BD',
       contact_phone: venueData.contact_phone,
       maps_url: venueData.maps_url,
+      image_url: venueData.image_url,
       price_range: venueData.price_range,
       created_by: (currentUser?.id && currentUser.id.includes('-')) ? currentUser.id : undefined,
       created_at: new Date().toISOString(),
@@ -1066,6 +1067,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         address: newVenue.address,
         district_code: newVenue.district_code,
         maps_url: newVenue.maps_url || null,
+        image_url: newVenue.image_url || null,
       };
       if (newVenue.contact_phone) payload.contact_phone = newVenue.contact_phone;
       if (newVenue.price_range) payload.price_range = newVenue.price_range;
@@ -1099,6 +1101,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (venueData.district_code !== undefined) updatePayload.district_code = venueData.district_code;
       if (venueData.contact_phone !== undefined) updatePayload.contact_phone = venueData.contact_phone || null;
       if (venueData.maps_url !== undefined) updatePayload.maps_url = venueData.maps_url || null;
+      if (venueData.image_url !== undefined) updatePayload.image_url = venueData.image_url || null;
       if (venueData.price_range !== undefined) updatePayload.price_range = venueData.price_range || null;
 
       const { error } = await supabase.from('venues').update(updatePayload).eq('id', venueId);

@@ -4,6 +4,7 @@ import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '@astryxdesign/core/Table';
+import { Thumbnail } from '@astryxdesign/core/Thumbnail';
 import { Pagination } from '@astryxdesign/core/Pagination';
 import { useApp } from '../context/AppContext';
 import { MapPin, Plus } from 'lucide-react';
@@ -42,9 +43,10 @@ export const VenuesView: React.FC<VenuesViewProps> = ({ onOpenAddVenue }) => {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHeaderCell style={{ width: '68px' }}>Ảnh sân</TableHeaderCell>
             <TableHeaderCell>Tên sân</TableHeaderCell>
             <TableHeaderCell>Địa chỉ</TableHeaderCell>
-            <TableHeaderCell>Số kèo đang tổ chức</TableHeaderCell>
+            <TableHeaderCell style={{ width: '160px' }}>Số kèo đang tổ chức</TableHeaderCell>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -53,6 +55,37 @@ export const VenuesView: React.FC<VenuesViewProps> = ({ onOpenAddVenue }) => {
 
             return (
               <TableRow key={venue.id}>
+                <TableCell style={{ width: '68px', verticalAlign: 'middle' }}>
+                  {venue.image_url ? (
+                    <Thumbnail
+                      src={venue.image_url}
+                      alt={venue.name}
+                      label={venue.name}
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: 'var(--radius-md)',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <HStack
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        backgroundColor: 'var(--color-surface-sunken)',
+                        borderRadius: 'var(--radius-md)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1px solid var(--color-border)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <MapPin size={20} color="var(--color-icon-tertiary)" />
+                    </HStack>
+                  )}
+                </TableCell>
                 <TableCell>
                   <HStack gap={1} style={{ alignItems: 'center' }}>
                     <MapPin size={16} color="var(--color-icon-accent)" />

@@ -17,6 +17,7 @@ export const VenueModal: React.FC<VenueModalProps> = ({ isOpen, onClose }) => {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [districtCode, setDistrictCode] = useState('HN_BD');
+  const [imageUrl, setImageUrl] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,11 +30,13 @@ export const VenueModal: React.FC<VenueModalProps> = ({ isOpen, onClose }) => {
       name,
       address,
       district_code: districtCode,
+      image_url: imageUrl.trim() || undefined,
     });
 
     alert('Đã thêm sân cầu lông vào danh mục!');
     setName('');
     setAddress('');
+    setImageUrl('');
     onClose();
   };
 
@@ -109,6 +112,22 @@ export const VenueModal: React.FC<VenueModalProps> = ({ isOpen, onClose }) => {
                   </option>
                 ))}
               </select>
+            </VStack>
+
+            <VStack gap={1} style={{ width: '100%' }}>
+              <Text weight="semibold">Link ảnh sân (URL tùy chọn)</Text>
+              <input
+                type="url"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="https://... (ảnh thực tế của sân)"
+                style={{
+                  padding: 'var(--spacing-2)',
+                  borderRadius: 'var(--radius-element)',
+                  border: '1px solid var(--color-border)',
+                  width: '100%',
+                }}
+              />
             </VStack>
 
             <HStack gap={2} style={{ justifyContent: 'flex-end', paddingTop: 'var(--spacing-2)' }}>

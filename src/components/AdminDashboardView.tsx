@@ -8,6 +8,7 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { TabList, Tab } from '@astryxdesign/core/TabList';
 import { Pagination } from '@astryxdesign/core/Pagination';
 import { Avatar } from '@astryxdesign/core/Avatar';
+import { Thumbnail } from '@astryxdesign/core/Thumbnail';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout';
 import {
@@ -88,6 +89,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [venueAddress, setVenueAddress] = useState('');
   const [venueDistrictCode, setVenueDistrictCode] = useState('HN_BD');
   const [venueMapsUrl, setVenueMapsUrl] = useState('');
+  const [venueImageUrl, setVenueImageUrl] = useState('');
 
   // Status feedback toast / alert
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
@@ -131,6 +133,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setVenueAddress('');
     setVenueDistrictCode('HN_BD');
     setVenueMapsUrl('');
+    setVenueImageUrl('');
     setIsVenueModalOpen(true);
   };
 
@@ -140,6 +143,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setVenueAddress(v.address);
     setVenueDistrictCode(v.district_code || 'HN_BD');
     setVenueMapsUrl(v.maps_url || '');
+    setVenueImageUrl(v.image_url || '');
     setIsVenueModalOpen(true);
   };
 
@@ -157,6 +161,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           address: venueAddress.trim(),
           district_code: venueDistrictCode,
           maps_url: venueMapsUrl.trim(),
+          image_url: venueImageUrl.trim() || undefined,
         });
         showSuccess(`Đã cập nhật thông tin sân "${venueName}" thành công!`);
       } else {
@@ -165,6 +170,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           address: venueAddress.trim(),
           district_code: venueDistrictCode,
           maps_url: venueMapsUrl.trim(),
+          image_url: venueImageUrl.trim() || undefined,
         });
         showSuccess(`Đã thêm sân "${venueName}" vào cơ sở dữ liệu!`);
       }
@@ -418,6 +424,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--color-background-muted)', borderBottom: '1px solid var(--color-border)' }}>
+                    <th style={{ padding: 'var(--spacing-3)', width: '60px' }}>Ảnh sân</th>
                     <th style={{ padding: 'var(--spacing-3)' }}>Tên sân</th>
                     <th style={{ padding: 'var(--spacing-3)' }}>Địa chỉ</th>
                     <th style={{ padding: 'var(--spacing-3)', whiteSpace: 'nowrap', width: '130px' }}>Link vị trí</th>
@@ -433,6 +440,37 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         transition: 'background 0.15s ease',
                       }}
                     >
+                      <td style={{ padding: 'var(--spacing-3)', width: '60px', verticalAlign: 'middle' }}>
+                        {v.image_url ? (
+                          <Thumbnail
+                            src={v.image_url}
+                            alt={v.name}
+                            label={v.name}
+                            style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: 'var(--radius-sm)',
+                              overflow: 'hidden',
+                              flexShrink: 0,
+                            }}
+                          />
+                        ) : (
+                          <HStack
+                            style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: 'var(--radius-sm)',
+                              backgroundColor: 'var(--color-surface-sunken)',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              border: '1px solid var(--color-border)',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <MapPin size={16} color="var(--color-icon-tertiary)" />
+                          </HStack>
+                        )}
+                      </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         <VStack gap={0}>
                           <Text weight="bold">{v.name}</Text>
@@ -1275,6 +1313,49 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         boxSizing: 'border-box',
                       }}
                     />
+                  </VStack>
+
+                  {/* Row 4: Link ảnh sân */}
+                  <VStack gap={1} style={{ width: '100%' }}>
+                    <Text weight="semibold" style={{ fontSize: '13px' }}>
+                      Link ảnh sân thực tế (URL)
+                    </Text>
+                    <input
+                      type="url"
+                      value={venueImageUrl}
+                      onChange={(e) => setVenueImageUrl(e.target.value)}
+                      placeholder="https://lh3.googleusercontent.com/... hoặc link ảnh bất kỳ"
+                      style={{
+                        padding: 'var(--spacing-2) var(--spacing-3)',
+                        borderRadius: 'var(--radius-element)',
+                        border: '1px solid var(--color-border)',
+                        background: 'var(--color-background-surface)',
+                        color: 'var(--color-text-primary)',
+                        fontSize: '13px',
+                        height: '38px',
+                        width: '100%',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                    {venueImageUrl && (
+                      <HStack gap={2} style={{ alignItems: 'center', marginTop: 'var(--spacing-1)' }}>
+                        <Thumbnail
+                          src={venueImageUrl}
+                          alt="Xem trước ảnh sân"
+                          label="Ảnh sân"
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: 'var(--radius-sm)',
+                            overflow: 'hidden',
+                          }}
+                        />
+                        <Text type="supporting" color="secondary" style={{ fontSize: '12px' }}>
+                          Ảnh xem trước thực tế của sân
+                        </Text>
+                      </HStack>
+                    )}
                   </VStack>
 
                   <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>

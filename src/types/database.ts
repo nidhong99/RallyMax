@@ -81,6 +81,7 @@ export interface Venue {
   longitude?: number;
   contact_phone?: string;
   maps_url?: string;
+  image_url?: string;
   price_range?: string;
   created_by?: string;
   created_at?: string;

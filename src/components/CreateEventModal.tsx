@@ -534,6 +534,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                             } else {
                               setLocationUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.name + ' ' + (selected.address || ''))}`);
                             }
+                            if (selected.image_url) {
+                              setCoverImageUrl(selected.image_url);
+                            }
                           }
                         }}
                         defaultValue=""

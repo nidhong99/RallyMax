@@ -70,19 +70,19 @@ function parseCSV(text) {
 // 3. Hàm tự động dò district_code từ chuỗi địa chỉ
 function detectDistrictCode(address) {
   const addr = (address || '').toLowerCase();
-  if (addr.includes('cầu giấy')) return 'HN_CG';
-  if (addr.includes('ba đình')) return 'HN_BD';
-  if (addr.includes('đống đa')) return 'HN_DD';
-  if (addr.includes('thanh xuân')) return 'HN_TX';
-  if (addr.includes('hai bà trưng')) return 'HN_HBT';
-  if (addr.includes('nam từ liêm') || addr.includes('từ liêm') || addr.includes('xuân phương') || addr.includes('mỹ đình')) return 'HN_NTL';
+  if (addr.includes('cầu giấy') || addr.includes('nghĩa đô') || addr.includes('dịch vọng') || addr.includes('trần thái tông') || addr.includes('duy tân')) return 'HN_CG';
+  if (addr.includes('ba đình') || addr.includes('đội cấn') || addr.includes('ngọc hà') || addr.includes('giảng võ') || addr.includes('kim mã') || addr.includes('liễu giai') || addr.includes('quán thánh') || addr.includes('vĩnh phúc') || addr.includes('phúc xá') || addr.includes('trúc bạch') || addr.includes('cống vị') || addr.includes('thành công') || addr.includes('điện biên') || addr.includes('tân ấp')) return 'HN_BD';
+  if (addr.includes('đống đa') || addr.includes('ô chợ dừa') || addr.includes('láng thượng') || addr.includes('láng hạ') || addr.includes('chùa bộc') || addr.includes('thái hà') || addr.includes('hoàng cầu')) return 'HN_DD';
+  if (addr.includes('thanh xuân') || addr.includes('khuất duy tiến') || addr.includes('nguyễn trãi') || addr.includes('khương trung') || addr.includes('khương đình') || addr.includes('vũ hữu')) return 'HN_TX';
+  if (addr.includes('hai bà trưng') || addr.includes('minh khai') || addr.includes('vĩnh tuy') || addr.includes('bách khoa') || addr.includes('bạch mai') || addr.includes('thanh nhàn') || addr.includes('trương định')) return 'HN_HBT';
+  if (addr.includes('nam từ liêm') || addr.includes('từ liêm') || addr.includes('xuân phương') || addr.includes('mỹ đình') || addr.includes('trịnh văn bô')) return 'HN_NTL';
   if (addr.includes('bắc từ liêm') || addr.includes('tây tựu') || addr.includes('phú diễn') || addr.includes('xuân đỉnh') || addr.includes('đông ngạc')) return 'HN_BTL';
   if (addr.includes('hà đông') || addr.includes('la khê') || addr.includes('yên nghĩa') || addr.includes('văn khê')) return 'HN_HD';
-  if (addr.includes('thanh trì') || addr.includes('thanh liệt') || addr.includes('triều khúc') || addr.includes('tân triều')) return 'HN_TT';
-  if (addr.includes('hoàng mai') || addr.includes('định công') || addr.includes('hoàng liệt') || addr.includes('ao sào')) return 'HN_HM';
-  if (addr.includes('tây hồ') || addr.includes('võ chí công')) return 'HN_TH';
-  if (addr.includes('long biên')) return 'HN_LB';
-  if (addr.includes('hoàn kiếm')) return 'HN_HK';
+  if (addr.includes('thanh trì') || addr.includes('thanh liệt') || addr.includes('triều khúc') || addr.includes('tân triều') || addr.includes('ngọc hồi') || addr.includes('phan trọng tuệ')) return 'HN_TT';
+  if (addr.includes('hoàng mai') || addr.includes('định công') || addr.includes('hoàng liệt') || addr.includes('ao sào') || addr.includes('phương liệt')) return 'HN_HM';
+  if (addr.includes('tây hồ') || addr.includes('võ chí công') || addr.includes('xuân la') || addr.includes('yên phụ') || addr.includes('quảng an') || addr.includes('nhật tân')) return 'HN_TH';
+  if (addr.includes('long biên') || addr.includes('bồ đề') || addr.includes('ngọc lâm')) return 'HN_LB';
+  if (addr.includes('hoàn kiếm') || addr.includes('trần hưng đạo') || addr.includes('hàng bông') || addr.includes('tràng tiền')) return 'HN_HK';
   if (addr.includes('gia lâm')) return 'HN_GL';
   if (addr.includes('hoài đức')) return 'HN_HDC';
   if (addr.includes('đông anh')) return 'HN_DA';
@@ -145,6 +145,7 @@ async function main() {
     const mapsUrl = (row.url || '').trim();
     const lat = parseFloat(row['location/lat']) || null;
     const lng = parseFloat(row['location/lng']) || null;
+    const imageUrl = (row.imageUrl || '').trim() || null;
 
     if (!title || !address) {
       continue;
@@ -164,6 +165,7 @@ async function main() {
       maps_url: mapsUrl,
       latitude: lat,
       longitude: lng,
+      image_url: imageUrl,
     });
   }
 
@@ -186,6 +188,7 @@ async function main() {
           maps_url: venue.maps_url,
           latitude: venue.latitude,
           longitude: venue.longitude,
+          image_url: venue.image_url,
         },
         { onConflict: 'name,address' }
       )
@@ -195,7 +198,8 @@ async function main() {
       console.error(`❌ Lỗi sân "${venue.name}":`, error.message);
       errorCount++;
     } else {
-      console.log(`✔️ [${venue.district_code}] ${venue.name} (${venue.address.slice(0, 40)}...)`);
+      const hasImg = venue.image_url ? '📸' : '⚪';
+      console.log(`✔️ [${venue.district_code}] ${hasImg} ${venue.name} (${venue.address.slice(0, 40)}...)`);
       insertedCount++;
     }
   }
