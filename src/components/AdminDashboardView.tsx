@@ -424,7 +424,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--color-background-muted)', borderBottom: '1px solid var(--color-border)' }}>
-                    <th style={{ padding: 'var(--spacing-3)', width: '60px' }}>Ảnh sân</th>
+                    <th style={{ padding: 'var(--spacing-3)', width: '90px', minWidth: '90px', whiteSpace: 'nowrap' }}>Ảnh bìa</th>
                     <th style={{ padding: 'var(--spacing-3)' }}>Tên sân</th>
                     <th style={{ padding: 'var(--spacing-3)' }}>Địa chỉ</th>
                     <th style={{ padding: 'var(--spacing-3)', whiteSpace: 'nowrap', width: '130px' }}>Link vị trí</th>
@@ -440,7 +440,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         transition: 'background 0.15s ease',
                       }}
                     >
-                      <td style={{ padding: 'var(--spacing-3)', width: '60px', verticalAlign: 'middle' }}>
+                      <td style={{ padding: 'var(--spacing-3)', width: '90px', minWidth: '90px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         {v.image_url ? (
                           <Thumbnail
                             src={v.image_url}
