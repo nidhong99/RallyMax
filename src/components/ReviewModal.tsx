@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Select } from './Select';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
@@ -80,7 +81,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ event, isOpen, onClose
           <VStack gap={3}>
             <VStack gap={1}>
               <Text weight="semibold">Người bạn muốn đánh giá:</Text>
-              <select
+              <Select
                 value={selectedTargetId}
                 onChange={(e) => setTargetUserId(e.target.value)}
                 style={{
@@ -95,7 +96,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ event, isOpen, onClose
                     {u.full_name} ({u.id === event.host_id ? 'Chủ xị (Host)' : 'Vận động viên'})
                   </option>
                 ))}
-              </select>
+              </Select>
             </VStack>
 
             {/* Overall Rating */}
@@ -128,7 +129,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ event, isOpen, onClose
             <HStack gap={2} style={{ width: '100%' }}>
               <VStack gap={1} style={{ flex: 1 }}>
                 <Text weight="semibold">Đánh giá đúng trình độ (1-5)</Text>
-                <select
+                <Select
                   value={skillAccuracy}
                   onChange={(e) => setSkillAccuracy(Number(e.target.value))}
                   style={{
@@ -143,12 +144,12 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ event, isOpen, onClose
                   <option value={3}>3 - Chênh lệch nhẹ</option>
                   <option value={2}>2 - Khai báo lệch nhiều</option>
                   <option value={1}>1 - Khai báo hoàn toàn sai</option>
-                </select>
+                </Select>
               </VStack>
 
               <VStack gap={1} style={{ flex: 1 }}>
                 <Text weight="semibold">Độ đúng giờ (1-5)</Text>
-                <select
+                <Select
                   value={punctuality}
                   onChange={(e) => setPunctuality(Number(e.target.value))}
                   style={{
@@ -163,7 +164,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ event, isOpen, onClose
                   <option value={3}>3 - Trễ 5-10 phút có báo</option>
                   <option value={2}>2 - Trễ nhiều không báo</option>
                   <option value={1}>1 - Bùng kèo</option>
-                </select>
+                </Select>
               </VStack>
             </HStack>
 

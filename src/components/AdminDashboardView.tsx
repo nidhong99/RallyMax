@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Select } from './Select';
 import { Card } from '@astryxdesign/core/Card';
 import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
@@ -28,6 +29,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   Lock,
+  Image as ImageIcon,
+  Eye,
+  Check,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Venue, Event, Profile, UserRole } from '../types/database';
@@ -90,6 +97,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [venueDistrictCode, setVenueDistrictCode] = useState('HN_BD');
   const [venueMapsUrl, setVenueMapsUrl] = useState('');
   const [venueImageUrl, setVenueImageUrl] = useState('');
+  const [venueGalleryImages, setVenueGalleryImages] = useState<string[]>([]);
+  const [newGalleryUrlInput, setNewGalleryUrlInput] = useState('');
+  const [coverImageError, setCoverImageError] = useState(false);
+  const [previewCoverModalUrl, setPreviewCoverModalUrl] = useState<string | null>(null);
+  const [previewVenue, setPreviewVenue] = useState<Venue | null>(null);
+  const [previewVenueActiveIndex, setPreviewVenueActiveIndex] = useState(0);
 
   // Status feedback toast / alert
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
@@ -134,6 +147,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setVenueDistrictCode('HN_BD');
     setVenueMapsUrl('');
     setVenueImageUrl('');
+    setVenueGalleryImages([]);
+    setNewGalleryUrlInput('');
+    setCoverImageError(false);
     setIsVenueModalOpen(true);
   };
 
@@ -144,7 +160,53 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setVenueDistrictCode(v.district_code || 'HN_BD');
     setVenueMapsUrl(v.maps_url || '');
     setVenueImageUrl(v.image_url || '');
+    
+    // Nạp tối đa 10 ảnh hiện có từ gallery_images hoặc fallback từ image_url
+    const rawGallery = (v.gallery_images && v.gallery_images.length > 0)
+      ? v.gallery_images
+      : (v.image_url ? [v.image_url] : []);
+    setVenueGalleryImages(rawGallery.slice(0, 10));
+    setNewGalleryUrlInput('');
+    setCoverImageError(false);
     setIsVenueModalOpen(true);
+  };
+
+  const handleSetAsCover = (url: string) => {
+    setVenueImageUrl(url);
+    setCoverImageError(false);
+  };
+
+  const handleAddGalleryImage = () => {
+    const trimmed = newGalleryUrlInput.trim();
+    if (!trimmed) return;
+    if (venueGalleryImages.length >= 10) {
+      alert('Mỗi sân chỉ lưu trữ tối đa 10 ảnh mới nhất!');
+      return;
+    }
+    if (venueGalleryImages.includes(trimmed)) {
+      alert('Link ảnh này đã có trong bộ sưu tập sân.');
+      return;
+    }
+    const updated = [...venueGalleryImages, trimmed].slice(0, 10);
+    setVenueGalleryImages(updated);
+    setNewGalleryUrlInput('');
+    // Nếu chưa có ảnh bìa thì tự động chọn ảnh này làm bìa
+    if (!venueImageUrl.trim()) {
+      setVenueImageUrl(trimmed);
+      setCoverImageError(false);
+    }
+  };
+
+  const handleRemoveGalleryImage = (indexToRemove: number) => {
+    const removedUrl = venueGalleryImages[indexToRemove];
+    const updated = venueGalleryImages.filter((_, idx) => idx !== indexToRemove);
+    setVenueGalleryImages(updated);
+
+    // Nếu ảnh vừa xóa trùng với ảnh bìa thì cập nhật sang ảnh đầu tiên còn lại
+    if (venueImageUrl.trim() === removedUrl) {
+      setVenueImageUrl(updated[0] || '');
+      setCoverImageError(false);
+    }
   };
 
   const handleSaveVenue = async (e: React.FormEvent) => {
@@ -155,13 +217,24 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     }
 
     try {
+      // Chuẩn hóa danh sách tối đa 10 ảnh
+      let finalGallery = [...venueGalleryImages];
+      const currentCover = venueImageUrl.trim();
+      if (currentCover && !finalGallery.includes(currentCover)) {
+        finalGallery.unshift(currentCover);
+      }
+      finalGallery = finalGallery.slice(0, 10);
+
+      const payloadCover = currentCover || (finalGallery[0] || undefined);
+
       if (editingVenue) {
         await updateVenue(editingVenue.id, {
           name: venueName.trim(),
           address: venueAddress.trim(),
           district_code: venueDistrictCode,
           maps_url: venueMapsUrl.trim(),
-          image_url: venueImageUrl.trim() || undefined,
+          image_url: payloadCover,
+          gallery_images: finalGallery,
         });
         showSuccess(`Đã cập nhật thông tin sân "${venueName}" thành công!`);
       } else {
@@ -170,7 +243,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           address: venueAddress.trim(),
           district_code: venueDistrictCode,
           maps_url: venueMapsUrl.trim(),
-          image_url: venueImageUrl.trim() || undefined,
+          image_url: payloadCover,
+          gallery_images: finalGallery,
         });
         showSuccess(`Đã thêm sân "${venueName}" vào cơ sở dữ liệu!`);
       }
@@ -222,7 +296,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     return e.status === eventStatusFilter;
   });
 
-  const disputedUsers = allUsers.filter(u => (u.reliability_score ?? 100) < 95 || (u.no_show_count ?? 0) > 0);
+  const disputedUsers = allUsers.filter(u => (u.reliability_score ?? 100) < 95 || (u.total_no_shows ?? 0) > 0);
 
   // Paginated slices
   const venueTotal = filteredVenues.length;
@@ -440,26 +514,67 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         transition: 'background 0.15s ease',
                       }}
                     >
-                      <td style={{ padding: 'var(--spacing-3)', width: '90px', minWidth: '90px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: 'var(--spacing-3)', width: '100px', minWidth: '100px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         {v.image_url ? (
-                          <Thumbnail
-                            src={v.image_url}
-                            alt={v.name}
-                            label={v.name}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewVenue(v);
+                              setPreviewVenueActiveIndex(0);
+                            }}
+                            title="Bấm để xem toàn bộ ảnh thực tế của sân"
                             style={{
-                              width: '42px',
-                              height: '42px',
-                              borderRadius: 'var(--radius-sm)',
+                              background: 'var(--color-surface-sunken)',
+                              border: '1px solid var(--color-border)',
+                              padding: 0,
+                              margin: 0,
+                              cursor: 'pointer',
+                              position: 'relative',
+                              display: 'block',
+                              width: '60px',
+                              height: '60px',
+                              borderRadius: 'var(--radius-container, 12px)',
                               overflow: 'hidden',
                               flexShrink: 0,
                             }}
-                          />
+                          >
+                            <img
+                              src={v.image_url}
+                              alt={v.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                display: 'block',
+                                borderRadius: 'var(--radius-container, 12px)',
+                              }}
+                            />
+                            {((v.gallery_images?.length ?? 0) > 1) && (
+                              <span
+                                style={{
+                                  position: 'absolute',
+                                  bottom: '3px',
+                                  right: '3px',
+                                  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                                  color: '#ffffff',
+                                  fontSize: '10px',
+                                  fontWeight: 700,
+                                  padding: '1px 5px',
+                                  borderRadius: 'var(--radius-full)',
+                                  lineHeight: '1.2',
+                                  pointerEvents: 'none',
+                                }}
+                              >
+                                +{v.gallery_images?.length}
+                              </span>
+                            )}
+                          </button>
                         ) : (
                           <HStack
                             style={{
-                              width: '42px',
-                              height: '42px',
-                              borderRadius: 'var(--radius-sm)',
+                              width: '60px',
+                              height: '60px',
+                              borderRadius: 'var(--radius-container, 12px)',
                               backgroundColor: 'var(--color-surface-sunken)',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -467,7 +582,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                               flexShrink: 0,
                             }}
                           >
-                            <MapPin size={16} color="var(--color-icon-tertiary)" />
+                            <MapPin size={22} color="var(--color-icon-tertiary)" />
                           </HStack>
                         )}
                       </td>
@@ -484,6 +599,25 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                               return v.district ? `${v.district}, ${v.city || ''}` : v.district_code;
                             })()}
                           </Text>
+                          {v.images_count !== undefined && v.images_count !== null && (
+                            <HStack style={{ marginTop: '2px' }}>
+                              <span
+                                style={{
+                                  fontSize: '10px',
+                                  padding: '1px 6px',
+                                  borderRadius: 'var(--radius-inner, 4px)',
+                                  backgroundColor: 'var(--color-surface-sunken)',
+                                  color: 'var(--color-text-secondary)',
+                                  border: '1px solid var(--color-border)',
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {v.images_count > 10
+                                  ? `Google: ${v.images_count} ảnh • Quản lý 10 ảnh`
+                                  : `Google: ${v.images_count} ảnh • Lấy toàn bộ`}
+                              </span>
+                            </HStack>
+                          )}
                         </VStack>
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
@@ -607,17 +741,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
             <HStack gap={2} style={{ alignItems: 'center' }}>
               <Text type="supporting" weight="medium">Lọc vai trò:</Text>
-              <select
+              <Select
                 value={userRoleFilter}
                 onChange={(e) => {
                   setUserRoleFilter(e.target.value as any);
                   setUserPage(1);
                 }}
                 style={{
-                  padding: 'var(--spacing-1) var(--spacing-2)',
-                  borderRadius: 'var(--radius-element)',
-                  border: '1px solid var(--color-border)',
-                  backgroundColor: 'var(--color-background-surface)',
                   fontSize: '13px',
                 }}
               >
@@ -625,7 +755,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <option value="ADMIN">Admin</option>
                 <option value="HOST">Host</option>
                 <option value="PLAYER">Player</option>
-              </select>
+              </Select>
 
               <Button
                 size="sm"
@@ -684,7 +814,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         {/* Interactive Role Switcher Dropdown */}
-                        <select
+                        <Select
                           value={displayRole}
                           onChange={async (e) => {
                             const newRole = e.target.value as UserRole;
@@ -696,9 +826,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                             }
                           }}
                           style={{
-                            padding: '4px 8px',
-                            borderRadius: 'var(--radius-element)',
-                            border: '1px solid var(--color-border)',
                             backgroundColor:
                               displayRole === 'ADMIN'
                                 ? 'rgba(99, 102, 241, 0.1)'
@@ -707,13 +834,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                                   : 'var(--color-background-surface)',
                             fontWeight: 600,
                             fontSize: '12px',
-                            cursor: 'pointer',
                           }}
                         >
                           <option value="PLAYER">PLAYER</option>
                           <option value="HOST">HOST</option>
                           <option value="ADMIN">ADMIN</option>
-                        </select>
+                        </Select>
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         {/* Verified Host Badge Toggle */}
@@ -746,10 +872,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         <VStack gap={0}>
-                          <Text>{u.matches_played ?? 0} trận tham gia</Text>
-                          {(u.no_show_count ?? 0) > 0 && (
+                          <Text>{u.total_matches_played ?? 0} trận tham gia</Text>
+                          {(u.total_no_shows ?? 0) > 0 && (
                             <Text style={{ fontSize: '11px', color: 'var(--color-destructive)', fontWeight: 600 }}>
-                              ⚠️ {u.no_show_count} lần bùng kèo
+                              ⚠️ {u.total_no_shows} lần bùng kèo
                             </Text>
                           )}
                         </VStack>
@@ -875,17 +1001,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
             <HStack gap={2} style={{ alignItems: 'center' }}>
               <Text type="supporting" weight="medium">Trạng thái:</Text>
-              <select
+              <Select
                 value={eventStatusFilter}
                 onChange={(e) => {
                   setEventStatusFilter(e.target.value);
                   setEventPage(1);
                 }}
                 style={{
-                  padding: 'var(--spacing-1) var(--spacing-2)',
-                  borderRadius: 'var(--radius-element)',
-                  border: '1px solid var(--color-border)',
-                  backgroundColor: 'var(--color-background-surface)',
                   fontSize: '13px',
                 }}
               >
@@ -894,7 +1016,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <option value="FULL">Đã đủ người</option>
                 <option value="COMPLETED">Đã kết thúc</option>
                 <option value="CANCELLED">Đã hủy</option>
-              </select>
+              </Select>
             </HStack>
           </HStack>
 
@@ -932,7 +1054,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         <VStack gap={0}>
-                          <Text weight="medium">{evt.start_time?.slice(0, 5)} · {evt.start_date}</Text>
+                          <Text weight="medium">
+                            {new Date(evt.start_time).toLocaleDateString('vi-VN')} · {new Date(evt.start_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                          </Text>
                           <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
                             {evt.venue_name} ({evt.court_numbers || 'Sân'})
                           </Text>
@@ -1112,7 +1236,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
                         <Text style={{ color: 'var(--color-destructive)', fontWeight: 600 }}>
-                          {u.no_show_count ?? 0} lần
+                          {u.total_no_shows ?? 0} lần
                         </Text>
                       </td>
                       <td style={{ padding: 'var(--spacing-3)', textAlign: 'right' }}>
@@ -1180,8 +1304,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           if (!open) setIsVenueModalOpen(false);
         }}
         purpose="form"
-        width={580}
-        maxHeight="90dvh"
+        width={660}
+        maxHeight="92dvh"
       >
         <Layout
           height="fill"
@@ -1264,20 +1388,11 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       <Text weight="semibold" style={{ fontSize: '13px' }}>
                         Khu vực (Quận / Huyện) <span style={{ color: 'var(--color-destructive, #ef4444)' }}>*</span>
                       </Text>
-                      <select
+                      <Select
                         value={venueDistrictCode}
                         onChange={(e) => setVenueDistrictCode(e.target.value)}
                         style={{
-                          padding: 'var(--spacing-2) var(--spacing-3)',
-                          borderRadius: 'var(--radius-element)',
-                          border: '1px solid var(--color-border)',
-                          backgroundColor: 'var(--color-background-surface)',
-                          color: 'var(--color-text-primary)',
-                          fontSize: '13px',
                           height: '38px',
-                          width: '100%',
-                          outline: 'none',
-                          cursor: 'pointer',
                           boxSizing: 'border-box',
                         }}
                       >
@@ -1286,7 +1401,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                             {d.name} ({d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'TP.HCM' : 'Đà Nẵng'})
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </VStack>
                   </HStack>
 
@@ -1315,16 +1430,72 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     />
                   </VStack>
 
-                  {/* Row 4: Link ảnh sân */}
-                  <VStack gap={1} style={{ width: '100%' }}>
-                    <Text weight="semibold" style={{ fontSize: '13px' }}>
-                      Link ảnh sân thực tế (URL)
-                    </Text>
+                  {/* Row 4: Ảnh Bìa & Khung Xem Trước (Cover Image Preview) */}
+                  <VStack gap={2} style={{ width: '100%' }}>
+                    <HStack gap={2} style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                      <HStack gap={2} style={{ alignItems: 'center' }}>
+                        <Text weight="semibold" style={{ fontSize: '13px' }}>
+                          Ảnh bìa sân (Cover Image)
+                        </Text>
+                        <Badge variant="blue" label="Hiển thị chính" />
+                      </HStack>
+                      {venueImageUrl && !coverImageError && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          label="Phóng to xem thử"
+                          onClick={() => setPreviewCoverModalUrl(venueImageUrl)}
+                        />
+                      )}
+                    </HStack>
+
+                    {/* Khung Xem Trước Ảnh Bìa (Cover Banner Preview) */}
+                    <HStack
+                      style={{
+                        width: '100%',
+                        height: '180px',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--color-border)',
+                        backgroundColor: 'var(--color-surface-sunken)',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {venueImageUrl && !coverImageError ? (
+                        <img
+                          src={venueImageUrl}
+                          alt="Xem trước ảnh bìa sân"
+                          onError={() => setCoverImageError(true)}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            display: 'block',
+                          }}
+                        />
+                      ) : (
+                        <VStack gap={1} style={{ alignItems: 'center', padding: 'var(--spacing-4)', textAlign: 'center' }}>
+                          <ImageIcon size={36} color="var(--color-icon-tertiary)" />
+                          <Text weight="medium" style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                            {coverImageError ? 'Không thể tải ảnh từ link này (lỗi URL hoặc quyền riêng tư)' : 'Chưa có ảnh bìa sân'}
+                          </Text>
+                          <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
+                            Dán link URL bên dưới hoặc chọn một ảnh từ thư viện 10 ảnh để đặt làm ảnh bìa
+                          </Text>
+                        </VStack>
+                      )}
+                    </HStack>
+
                     <input
                       type="url"
                       value={venueImageUrl}
-                      onChange={(e) => setVenueImageUrl(e.target.value)}
-                      placeholder="https://lh3.googleusercontent.com/... hoặc link ảnh bất kỳ"
+                      onChange={(e) => {
+                        setVenueImageUrl(e.target.value);
+                        setCoverImageError(false);
+                      }}
+                      placeholder="https://... Link ảnh bìa hoặc chọn từ thư viện bên dưới"
                       style={{
                         padding: 'var(--spacing-2) var(--spacing-3)',
                         borderRadius: 'var(--radius-element)',
@@ -1338,22 +1509,182 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         boxSizing: 'border-box',
                       }}
                     />
-                    {venueImageUrl && (
-                      <HStack gap={2} style={{ alignItems: 'center', marginTop: 'var(--spacing-1)' }}>
-                        <Thumbnail
-                          src={venueImageUrl}
-                          alt="Xem trước ảnh sân"
-                          label="Ảnh sân"
-                          style={{
-                            width: '48px',
-                            height: '48px',
-                            borderRadius: 'var(--radius-sm)',
-                            overflow: 'hidden',
-                          }}
-                        />
-                        <Text type="supporting" color="secondary" style={{ fontSize: '12px' }}>
-                          Ảnh xem trước thực tế của sân
+                  </VStack>
+
+                  {/* Row 5: Thư viện ảnh sân (Gallery: Tối đa 10 ảnh) */}
+                  <VStack
+                    gap={3}
+                    style={{
+                      width: '100%',
+                      padding: 'var(--spacing-3)',
+                      backgroundColor: 'var(--color-surface-sunken)',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--color-border)',
+                    }}
+                  >
+                    <HStack gap={2} style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <HStack gap={2} style={{ alignItems: 'center' }}>
+                        <Text weight="semibold" style={{ fontSize: '13px' }}>
+                          Thư viện ảnh sân thực tế
                         </Text>
+                        <Badge
+                          variant={venueGalleryImages.length >= 10 ? 'neutral' : 'blue'}
+                          label={`${venueGalleryImages.length}/10 ảnh`}
+                        />
+                      </HStack>
+                      <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
+                        {editingVenue?.images_count && editingVenue.images_count > 10
+                          ? `Google có ${editingVenue.images_count} ảnh • Giới hạn 10 ảnh mới nhất để quản lý`
+                          : editingVenue?.images_count
+                          ? `Google có ${editingVenue.images_count} ảnh • Lấy toàn bộ ảnh có sẵn`
+                          : 'Tối đa 10 ảnh mới nhất • Bấm vào ảnh để đặt làm ảnh bìa'}
+                      </Text>
+                    </HStack>
+
+                    {/* Thanh thêm link ảnh vào thư viện */}
+                    <HStack gap={2} style={{ width: '100%' }}>
+                      <input
+                        type="url"
+                        value={newGalleryUrlInput}
+                        onChange={(e) => setNewGalleryUrlInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddGalleryImage();
+                          }
+                        }}
+                        placeholder="Dán link URL ảnh thực tế muốn bổ sung vào thư viện..."
+                        disabled={venueGalleryImages.length >= 10}
+                        style={{
+                          padding: 'var(--spacing-2) var(--spacing-3)',
+                          borderRadius: 'var(--radius-element)',
+                          border: '1px solid var(--color-border)',
+                          background: 'var(--color-background-surface)',
+                          color: 'var(--color-text-primary)',
+                          fontSize: '13px',
+                          height: '36px',
+                          flex: 1,
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        label="+ Thêm ảnh"
+                        isDisabled={venueGalleryImages.length >= 10 || !newGalleryUrlInput.trim()}
+                        onClick={handleAddGalleryImage}
+                      />
+                    </HStack>
+
+                    {/* Lưới các ảnh trong thư viện */}
+                    {venueGalleryImages.length === 0 ? (
+                      <Text type="supporting" color="secondary" style={{ fontSize: '12px', fontStyle: 'italic' }}>
+                        Chưa có ảnh trong thư viện. Bạn có thể thêm link ảnh hoặc import từ dữ liệu để lưu tối đa 10 ảnh.
+                      </Text>
+                    ) : (
+                      <HStack gap={2} style={{ flexWrap: 'wrap', width: '100%' }}>
+                        {venueGalleryImages.map((imgUrl, idx) => {
+                          const isCover = venueImageUrl.trim() === imgUrl.trim();
+                          return (
+                            <VStack
+                              key={`${imgUrl}-${idx}`}
+                              gap={1}
+                              style={{
+                                width: '110px',
+                                padding: 'var(--spacing-1)',
+                                borderRadius: 'var(--radius-sm)',
+                                backgroundColor: 'var(--color-background-surface)',
+                                border: isCover ? '2px solid var(--color-primary-base, #3b82f6)' : '1px solid var(--color-border)',
+                                position: 'relative',
+                                alignItems: 'center',
+                              }}
+                            >
+                              {/* Container Thumbnail */}
+                              <button
+                                type="button"
+                                onClick={() => handleSetAsCover(imgUrl)}
+                                title="Bấm để đặt làm ảnh bìa"
+                                style={{
+                                  width: '100%',
+                                  height: '68px',
+                                  border: 'none',
+                                  padding: 0,
+                                  margin: 0,
+                                  cursor: 'pointer',
+                                  borderRadius: 'var(--radius-xs)',
+                                  overflow: 'hidden',
+                                  background: 'transparent',
+                                }}
+                              >
+                                <img
+                                  src={imgUrl}
+                                  alt={`Ảnh sân ${idx + 1}`}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    display: 'block',
+                                  }}
+                                />
+                              </button>
+
+                              {/* Action buttons */}
+                              <HStack gap={1} style={{ width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                                {isCover ? (
+                                  <Badge variant="blue" label="★ Bìa" style={{ fontSize: '10px', padding: '1px 4px' }} />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetAsCover(imgUrl)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      padding: 0,
+                                      color: 'var(--color-primary-base, #3b82f6)',
+                                      fontSize: '11px',
+                                      cursor: 'pointer',
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    Chọn bìa
+                                  </button>
+                                )}
+
+                                <HStack gap={1} style={{ alignItems: 'center' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewCoverModalUrl(imgUrl)}
+                                    title="Xem phóng to ảnh này"
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      padding: 0,
+                                      cursor: 'pointer',
+                                      color: 'var(--color-icon-secondary)',
+                                    }}
+                                  >
+                                    <Eye size={13} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveGalleryImage(idx)}
+                                    title="Xóa khỏi thư viện"
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      padding: 0,
+                                      cursor: 'pointer',
+                                      color: 'var(--color-destructive, #ef4444)',
+                                    }}
+                                  >
+                                    <X size={13} />
+                                  </button>
+                                </HStack>
+                              </HStack>
+                            </VStack>
+                          );
+                        })}
                       </HStack>
                     )}
                   </VStack>
@@ -1382,11 +1713,321 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <Button
                   size="md"
                   variant="primary"
-                  label={editingVenue ? 'Lưu thay đổi' : 'Lưu thay đổi'}
+                  label={editingVenue ? 'Lưu thay đổi' : 'Tạo sân mới'}
                   onClick={() => {
                     const form = document.getElementById('venue-form') as HTMLFormElement;
                     if (form) form.requestSubmit();
                   }}
+                />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
+      </Dialog>
+
+      {/* 9. MODAL: Preview Toàn Bộ Ảnh Dữ Liệu Của Sân */}
+      <Dialog
+        isOpen={!!previewVenue}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewVenue(null);
+            setPreviewVenueActiveIndex(0);
+          }
+        }}
+        purpose="info"
+        width={760}
+        maxHeight="92dvh"
+      >
+        <Layout
+          height="fill"
+          header={
+            <DialogHeader
+              title={previewVenue?.name || 'Ảnh Sân Thực Tế'}
+              subtitle={
+                previewVenue
+                  ? `${previewVenue.address} • ${
+                      (previewVenue.images_count && previewVenue.images_count > 10) || ((previewVenue.gallery_images?.length ?? 0) > 10)
+                        ? `Google Maps có ${previewVenue.images_count || 'nhiều'} ảnh (Đang hiển thị 10 ảnh mới nhất để quản lý)`
+                        : `Đang hiển thị toàn bộ ${(previewVenue.gallery_images?.length || 1)} ảnh có sẵn của sân`
+                    }`
+                  : 'Toàn bộ hình ảnh thực tế được lưu trữ trong hệ thống'
+              }
+              hasDivider={true}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setPreviewVenue(null);
+                  setPreviewVenueActiveIndex(0);
+                }
+              }}
+            />
+          }
+          content={
+            <LayoutContent isScrollable={true} padding={4} style={{ overflowY: 'auto' }}>
+              {(() => {
+                const rawGallery = previewVenue ? (
+                  (previewVenue.gallery_images && previewVenue.gallery_images.length > 0)
+                    ? previewVenue.gallery_images
+                    : (previewVenue.image_url ? [previewVenue.image_url] : [])
+                ) : [];
+
+                // Sân nhiều hơn 10 ảnh: lấy 10 ảnh mới nhất để quản lý; Sân ít hơn 10 ảnh: lấy toàn bộ ảnh có sẵn
+                const gallery = rawGallery.length > 10 ? rawGallery.slice(0, 10) : rawGallery;
+
+                const currentImg = gallery[previewVenueActiveIndex] || previewVenue?.image_url;
+
+                return (
+                  <VStack gap={4} style={{ width: '100%' }}>
+                    {/* Khung ảnh chính lớn */}
+                    <VStack gap={2} style={{ width: '100%' }}>
+                      <HStack
+                        style={{
+                          width: '100%',
+                          height: '380px',
+                          borderRadius: 'var(--radius-lg)',
+                          overflow: 'hidden',
+                          position: 'relative',
+                          backgroundColor: 'var(--color-surface-sunken)',
+                          border: '1px solid var(--color-border)',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                      >
+                        {currentImg ? (
+                          <img
+                            src={currentImg}
+                            alt={previewVenue?.name}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              display: 'block',
+                            }}
+                          />
+                        ) : (
+                          <VStack gap={1} style={{ alignItems: 'center' }}>
+                            <ImageIcon size={48} color="var(--color-icon-tertiary)" />
+                            <Text color="secondary">Không có ảnh hiển thị</Text>
+                          </VStack>
+                        )}
+
+                        {/* Nút chuyển ảnh Trái / Phải nếu có nhiều ảnh */}
+                        {gallery.length > 1 && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewVenueActiveIndex((prev) => (prev > 0 ? prev - 1 : gallery.length - 1))}
+                              title="Ảnh trước"
+                              style={{
+                                position: 'absolute',
+                                left: '12px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'rgba(0, 0, 0, 0.65)',
+                                border: 'none',
+                                color: '#ffffff',
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <ChevronLeft size={22} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewVenueActiveIndex((prev) => (prev < gallery.length - 1 ? prev + 1 : 0))}
+                              title="Ảnh kế tiếp"
+                              style={{
+                                position: 'absolute',
+                                right: '12px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'rgba(0, 0, 0, 0.65)',
+                                border: 'none',
+                                color: '#ffffff',
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <ChevronRight size={22} />
+                            </button>
+                          </>
+                        )}
+
+                        {/* Badge đếm ảnh */}
+                        {gallery.length > 0 && (
+                          <span
+                            style={{
+                              position: 'absolute',
+                              bottom: '12px',
+                              right: '12px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                              color: '#ffffff',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              padding: '3px 10px',
+                              borderRadius: 'var(--radius-full)',
+                            }}
+                          >
+                            Ảnh {previewVenueActiveIndex + 1} / {gallery.length}
+                          </span>
+                        )}
+                      </HStack>
+                    </VStack>
+
+                    {/* Dải thumbnail bên dưới hiển thị đầy đủ tất cả các ảnh sân có */}
+                    {gallery.length > 0 && (
+                      <VStack gap={2} style={{ width: '100%' }}>
+                        <HStack gap={2} style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text weight="semibold" style={{ fontSize: '13px' }}>
+                            Tất cả ảnh của sân ({gallery.length} ảnh)
+                          </Text>
+                          <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
+                            Bấm vào thumbnail bất kỳ để xem phóng to
+                          </Text>
+                        </HStack>
+
+                        <HStack
+                          gap={2}
+                          style={{
+                            width: '100%',
+                            overflowX: 'auto',
+                            paddingBottom: 'var(--spacing-2)',
+                            scrollbarWidth: 'thin',
+                          }}
+                        >
+                          {gallery.map((imgUrl, idx) => {
+                            const isActive = idx === previewVenueActiveIndex;
+                            return (
+                              <button
+                                key={`${imgUrl}-${idx}`}
+                                type="button"
+                                onClick={() => setPreviewVenueActiveIndex(idx)}
+                                title={`Xem ảnh ${idx + 1}`}
+                                style={{
+                                  padding: 0,
+                                  margin: 0,
+                                  background: 'transparent',
+                                  border: isActive
+                                    ? '2px solid var(--color-primary-base, #3b82f6)'
+                                    : '1px solid var(--color-border)',
+                                  borderRadius: 'var(--radius-sm)',
+                                  overflow: 'hidden',
+                                  cursor: 'pointer',
+                                  width: '80px',
+                                  height: '60px',
+                                  flexShrink: 0,
+                                  opacity: isActive ? 1 : 0.75,
+                                }}
+                              >
+                                <img
+                                  src={imgUrl}
+                                  alt={`Ảnh ${idx + 1}`}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    display: 'block',
+                                  }}
+                                />
+                              </button>
+                            );
+                          })}
+                        </HStack>
+                      </VStack>
+                    )}
+                  </VStack>
+                );
+              })()}
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter hasDivider={true} style={{ background: 'var(--color-background-surface)' }}>
+              <HStack gap={2} hAlign="end" style={{ justifyContent: 'flex-end', width: '100%' }}>
+                <Button
+                  size="md"
+                  variant="primary"
+                  label="Đóng"
+                  onClick={() => {
+                    setPreviewVenue(null);
+                    setPreviewVenueActiveIndex(0);
+                  }}
+                />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
+      </Dialog>
+
+      {/* 10. MODAL: Preview Ảnh Bìa Đơn (Từ Form Modal Sân) */}
+      <Dialog
+        isOpen={!!previewCoverModalUrl}
+        onOpenChange={(open) => {
+          if (!open) setPreviewCoverModalUrl(null);
+        }}
+        purpose="info"
+        width={760}
+        maxHeight="90dvh"
+      >
+        <Layout
+          height="fill"
+          header={
+            <DialogHeader
+              title="Xem Trước Ảnh Sân Thực Tế"
+              subtitle="Hình ảnh thực tế hiển thị cho người chơi trên giao diện RallyMax"
+              hasDivider={true}
+              onOpenChange={(open) => {
+                if (!open) setPreviewCoverModalUrl(null);
+              }}
+            />
+          }
+          content={
+            <LayoutContent padding={4} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              {previewCoverModalUrl && (
+                <HStack
+                  style={{
+                    width: '100%',
+                    maxHeight: '65dvh',
+                    borderRadius: 'var(--radius-md)',
+                    overflow: 'hidden',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: 'var(--color-surface-sunken)',
+                  }}
+                >
+                  <img
+                    src={previewCoverModalUrl}
+                    alt="Xem ảnh sân phóng to"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '65dvh',
+                      objectFit: 'contain',
+                      display: 'block',
+                    }}
+                  />
+                </HStack>
+              )}
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter
+              hasDivider={true}
+              style={{ background: 'var(--color-background-surface)' }}
+            >
+              <HStack gap={2} hAlign="end" style={{ justifyContent: 'flex-end', width: '100%' }}>
+                <Button
+                  size="md"
+                  variant="primary"
+                  label="Đóng"
+                  onClick={() => setPreviewCoverModalUrl(null)}
                 />
               </HStack>
             </LayoutFooter>

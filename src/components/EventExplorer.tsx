@@ -1,3 +1,4 @@
+import { Select } from './Select';
 import React, { useState } from 'react';
 import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -108,7 +109,7 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
 
         {/* District Selector */}
         <VStack gap={1} style={{ width: '180px' }}>
-          <select
+          <Select
             value={districtFilter}
             onChange={(e) => setDistrictFilter(e.target.value)}
             style={{
@@ -125,12 +126,12 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
                 {d.name} ({d.province_code})
               </option>
             ))}
-          </select>
+          </Select>
         </VStack>
 
         {/* Skill Selector */}
         <VStack gap={1} style={{ width: '180px' }}>
-          <select
+          <Select
             value={skillFilter}
             onChange={(e) => setSkillFilter(e.target.value)}
             style={{
@@ -147,7 +148,7 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
                 {t(`skills.${k}.label`) || v.label}
               </option>
             ))}
-          </select>
+          </Select>
         </VStack>
 
         {/* Only available toggle */}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Select } from './Select';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
@@ -167,7 +168,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
                 <VStack gap={1} style={{ width: '120px' }}>
                   <Text weight="semibold">Giới tính</Text>
-                  <select
+                  <Select
                     value={gender}
                     onChange={(e) => setGender(e.target.value as any)}
                     style={{
@@ -180,7 +181,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                     <option value="MALE">Nam</option>
                     <option value="FEMALE">Nữ</option>
                     <option value="OTHER">Khác</option>
-                  </select>
+                  </Select>
                 </VStack>
               </HStack>
 
@@ -188,7 +189,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               <HStack gap={2} style={{ width: '100%' }}>
                 <VStack gap={1} style={{ flex: 1 }}>
                   <Text weight="semibold">Trình độ cầu lông (VN) *</Text>
-                  <select
+                  <Select
                     value={skillLevel}
                     onChange={(e) => setSkillLevel(e.target.value as SkillLevel)}
                     style={{
@@ -203,12 +204,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                         {v.label} - {v.desc}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </VStack>
 
                 <VStack gap={1} style={{ width: '150px' }}>
                   <Text weight="semibold">Tay thuận</Text>
-                  <select
+                  <Select
                     value={dominantHand}
                     onChange={(e) => setDominantHand(e.target.value as DominantHand)}
                     style={{
@@ -221,14 +222,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                     <option value="RIGHT">Tay Phải</option>
                     <option value="LEFT">Tay Trái</option>
                     <option value="BOTH">Hai tay</option>
-                  </select>
+                  </Select>
                 </VStack>
               </HStack>
 
               <HStack gap={2} style={{ width: '100%' }}>
                 <VStack gap={1} style={{ flex: 1 }}>
                   <Text weight="semibold">Vị trí / Lối đánh sở trường</Text>
-                  <select
+                  <Select
                     value={playStyle}
                     onChange={(e) => setPlayStyle(e.target.value as PlayStyle)}
                     style={{
@@ -243,12 +244,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                         {v}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </VStack>
 
                 <VStack gap={1} style={{ flex: 1 }}>
                   <Text weight="semibold">Khu vực sinh hoạt chính</Text>
-                  <select
+                  <Select
                     value={districtCode}
                     onChange={(e) => setDistrictCode(e.target.value)}
                     style={{
@@ -263,7 +264,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                         {d.name} ({d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'TP.HCM' : 'Đà Nẵng'})
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </VStack>
               </HStack>
 
