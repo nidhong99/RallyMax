@@ -82,6 +82,8 @@ export interface Venue {
   contact_phone?: string;
   maps_url?: string;
   image_url?: string;
+  gallery_images?: string[];
+  images_count?: number;
   price_range?: string;
   created_by?: string;
   created_at?: string;

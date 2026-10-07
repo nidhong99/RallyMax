@@ -147,6 +147,67 @@ function isBadmintonVenue(row) {
   return false;
 }
 
+// 4.1 Hàm trích xuất tối đa 10 ảnh mới nhất / nổi bật của mỗi sân
+function extractGalleryImages(row) {
+  const images = [];
+
+  // A. Kiểm tra mảng hoặc JSON trong images / imageUrls / photos
+  const candidateKeys = ['images', 'imageUrls', 'photos', 'photosUrls'];
+  for (const k of candidateKeys) {
+    if (row[k]) {
+      try {
+        const parsed = typeof row[k] === 'string' && (row[k].startsWith('[') || row[k].startsWith('{')) ? JSON.parse(row[k]) : row[k];
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            const url = typeof item === 'string' ? item : (item.imageUrl || item.url || item.photoUrl || '');
+            if (url && typeof url === 'string' && url.startsWith('http') && !images.includes(url)) {
+              images.push(url);
+            }
+          }
+        }
+      } catch (e) {
+        if (typeof row[k] === 'string' && row[k].includes('http')) {
+          const parts = row[k].split(/[\n,;]+/);
+          for (const p of parts) {
+            const trimmed = p.trim();
+            if (trimmed.startsWith('http') && !images.includes(trimmed)) {
+              images.push(trimmed);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // B. Kiểm tra các cột dạng flattened: images/0, images/1, ... hoặc imageUrls/0... hoặc photos/0...
+  for (let i = 0; i < 50; i++) {
+    const colPatterns = [
+      `images/${i}`,
+      `images/${i}/imageUrl`,
+      `images/${i}/url`,
+      `imageUrls/${i}`,
+      `photos/${i}`,
+      `photos/${i}/imageUrl`,
+      `photos/${i}/url`
+    ];
+    for (const col of colPatterns) {
+      const val = (row[col] || '').trim();
+      if (val && val.startsWith('http') && !images.includes(val)) {
+        images.push(val);
+      }
+    }
+  }
+
+  // C. Nếu có imageUrl mà chưa có trong danh sách, ưu tiên chèn lên đầu
+  const singleImage = (row.imageUrl || '').trim();
+  if (singleImage && singleImage.startsWith('http') && !images.includes(singleImage)) {
+    images.unshift(singleImage);
+  }
+
+  // D. Lấy tối đa 10 ảnh (nếu ít hơn 10 thì lấy toàn bộ ảnh hiện có)
+  return images.slice(0, 10);
+}
+
 // 5. Hàm import 1 file CSV
 async function importSingleFile(csvFile, fileIndex, totalFiles) {
   const fileName = path.basename(csvFile);
@@ -175,7 +236,6 @@ async function importSingleFile(csvFile, fileIndex, totalFiles) {
     const mapsUrl = (row.url || '').trim();
     const lat = parseFloat(row['location/lat']) || null;
     const lng = parseFloat(row['location/lng']) || null;
-    const imageUrl = (row.imageUrl || '').trim() || null;
 
     if (!title || !address) continue;
 
@@ -185,6 +245,8 @@ async function importSingleFile(csvFile, fileIndex, totalFiles) {
     }
 
     const districtCode = detectDistrictCode(address, fallbackDistrict);
+    const galleryImages = extractGalleryImages(row);
+    const coverImage = (row.imageUrl || '').trim() || (galleryImages[0] || null);
 
     validVenues.push({
       name: title,
@@ -193,7 +255,8 @@ async function importSingleFile(csvFile, fileIndex, totalFiles) {
       maps_url: mapsUrl,
       latitude: lat,
       longitude: lng,
-      image_url: imageUrl,
+      image_url: coverImage,
+      gallery_images: galleryImages,
     });
   }
 
@@ -215,6 +278,7 @@ async function importSingleFile(csvFile, fileIndex, totalFiles) {
           latitude: venue.latitude,
           longitude: venue.longitude,
           image_url: venue.image_url,
+          gallery_images: venue.gallery_images,
         },
         { onConflict: 'name,address' }
       )

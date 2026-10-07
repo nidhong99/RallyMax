@@ -16,6 +16,20 @@
         padding: 0;
         background-color: #ffffff;
       }
+      select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: none !important;
+        cursor: pointer;
+        line-height: 1.5;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      select:focus {
+        outline: none;
+        border-color: var(--color-interactive-primary, #198100);
+        box-shadow: 0 0 0 1px var(--color-interactive-primary, #198100);
+      }
     </style>
   </head>
   <body>

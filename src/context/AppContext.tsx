@@ -347,13 +347,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
               // Add live events from server (Server is single source of truth for synced events)
               data.forEach((ev: any) => {
+                const matchedV = venues.find(v => v.id === ev.venue_id || v.name === ev.venue_name);
                 map.set(ev.id, {
                   ...ev,
-                  venue: ev.venue || {
+                  cover_image_url: ev.cover_image_url || ev.venue?.image_url || matchedV?.image_url || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop&q=80',
+                  venue: ev.venue || matchedV || {
                     id: ev.venue_id || 'v-default',
                     name: ev.venue_name || 'Sân cầu lông',
                     address: ev.location_url || 'Đang cập nhật địa chỉ',
                     district_code: 'HN_BD',
+                    image_url: matchedV?.image_url,
                   },
                   host: ev.host,
                   registrations: ev.registrations || [],
@@ -751,12 +754,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : ((currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com' ? 'f4e7c76e-217a-46ed-8de8-daf349bbb020' : generateUuid());
 
     const eventId = generateUuid();
-    const venueName = eventData.venue_name || (eventData.venue_id ? venues.find(v => v.id === eventData.venue_id)?.name : 'Sân Cầu Lông');
+    const matchedVenue = venues.find(v => v.id === eventData.venue_id || v.name === eventData.venue_name);
+    const venueName = eventData.venue_name || matchedVenue?.name || 'Sân Cầu Lông';
     const fallbackVenue: Venue = {
-      id: eventData.venue_id || 'custom-venue-' + Date.now(),
+      id: eventData.venue_id || matchedVenue?.id || 'custom-venue-' + Date.now(),
       name: venueName,
-      address: eventData.location_url || 'Đang cập nhật địa chỉ',
-      district_code: 'HN_BD',
+      address: matchedVenue?.address || eventData.location_url || 'Đang cập nhật địa chỉ',
+      district_code: matchedVenue?.district_code || 'HN_BD',
+      image_url: matchedVenue?.image_url,
+      maps_url: eventData.location_url || matchedVenue?.maps_url,
     };
 
     const newEvent: Event = {
@@ -782,9 +788,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString(),
       cover_image_url:
         eventData.cover_image_url ||
+        matchedVenue?.image_url ||
         'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop&q=80',
       cover_image_position: eventData.cover_image_position || '50% 50%',
-      venue: fallbackVenue,
+      venue: {
+        ...fallbackVenue,
+        image_url: matchedVenue?.image_url || eventData.cover_image_url,
+      },
       host: { ...currentUser, id: validHostId },
       registrations: [],
     };
@@ -824,9 +834,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .single()
           .then(({ data, error }) => {
             if (data && !error) {
-              setEvents(prev =>
-                prev.map(e => (e.id === newEvent.id ? { ...e, id: data.id, ...data, host: currentUser, venue: fallbackVenue } : e))
-              );
+              setEvents(prev => {
+                const next = prev.map(e => (e.id === newEvent.id ? {
+                  ...e,
+                  id: data.id,
+                  ...data,
+                  cover_image_url: newEvent.cover_image_url || data.cover_image_url || data.venue?.image_url || matchedVenue?.image_url,
+                  cover_image_position: newEvent.cover_image_position || data.cover_image_position,
+                  venue: data.venue || {
+                    ...fallbackVenue,
+                    image_url: matchedVenue?.image_url || newEvent.cover_image_url,
+                  },
+                  host: currentUser,
+                } : e));
+                localStorage.setItem('rallymax_events', JSON.stringify(next));
+                return next;
+              });
             } else if (error) {
               console.warn('Supabase insert event warning:', error.message);
             }
@@ -1055,6 +1078,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       contact_phone: venueData.contact_phone,
       maps_url: venueData.maps_url,
       image_url: venueData.image_url,
+      gallery_images: venueData.gallery_images || (venueData.image_url ? [venueData.image_url] : []),
       price_range: venueData.price_range,
       created_by: (currentUser?.id && currentUser.id.includes('-')) ? currentUser.id : undefined,
       created_at: new Date().toISOString(),
@@ -1068,6 +1092,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         district_code: newVenue.district_code,
         maps_url: newVenue.maps_url || null,
         image_url: newVenue.image_url || null,
+        gallery_images: newVenue.gallery_images || [],
       };
       if (newVenue.contact_phone) payload.contact_phone = newVenue.contact_phone;
       if (newVenue.price_range) payload.price_range = newVenue.price_range;
@@ -1102,6 +1127,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (venueData.contact_phone !== undefined) updatePayload.contact_phone = venueData.contact_phone || null;
       if (venueData.maps_url !== undefined) updatePayload.maps_url = venueData.maps_url || null;
       if (venueData.image_url !== undefined) updatePayload.image_url = venueData.image_url || null;
+      if (venueData.gallery_images !== undefined) updatePayload.gallery_images = venueData.gallery_images;
       if (venueData.price_range !== undefined) updatePayload.price_range = venueData.price_range || null;
 
       const { error } = await supabase.from('venues').update(updatePayload).eq('id', venueId);

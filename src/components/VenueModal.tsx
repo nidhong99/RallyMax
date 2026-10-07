@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Select } from './Select';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
@@ -96,7 +97,7 @@ export const VenueModal: React.FC<VenueModalProps> = ({ isOpen, onClose }) => {
 
             <VStack gap={1} style={{ width: '100%' }}>
               <Text weight="semibold">Quận / Huyện</Text>
-              <select
+              <Select
                 value={districtCode}
                 onChange={(e) => setDistrictCode(e.target.value)}
                 style={{
@@ -111,7 +112,7 @@ export const VenueModal: React.FC<VenueModalProps> = ({ isOpen, onClose }) => {
                     {d.name} ({d.province_code === 'HN' ? 'Hà Nội' : d.province_code === 'HCM' ? 'TP.HCM' : 'Đà Nẵng'})
                   </option>
                 ))}
-              </select>
+              </Select>
             </VStack>
 
             <VStack gap={1} style={{ width: '100%' }}>
