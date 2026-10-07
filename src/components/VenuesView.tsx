@@ -43,7 +43,7 @@ export const VenuesView: React.FC<VenuesViewProps> = ({ onOpenAddVenue }) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHeaderCell style={{ width: '68px' }}>Ảnh sân</TableHeaderCell>
+            <TableHeaderCell style={{ width: '90px', minWidth: '90px', whiteSpace: 'nowrap' }}>Ảnh bìa</TableHeaderCell>
             <TableHeaderCell>Tên sân</TableHeaderCell>
             <TableHeaderCell>Địa chỉ</TableHeaderCell>
             <TableHeaderCell style={{ width: '160px' }}>Số kèo đang tổ chức</TableHeaderCell>
@@ -55,7 +55,7 @@ export const VenuesView: React.FC<VenuesViewProps> = ({ onOpenAddVenue }) => {
 
             return (
               <TableRow key={venue.id}>
-                <TableCell style={{ width: '68px', verticalAlign: 'middle' }}>
+                <TableCell style={{ width: '90px', minWidth: '90px', verticalAlign: 'middle' }}>
                   {venue.image_url ? (
                     <Thumbnail
                       src={venue.image_url}
