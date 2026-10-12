@@ -1,14 +1,23 @@
-import { Select } from './Select';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Selector } from '@astryxdesign/core/Selector';
+import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout';
 import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Divider } from '@astryxdesign/core/Divider';
 import { Button } from '@astryxdesign/core/Button';
 import { Switch } from '@astryxdesign/core/Switch';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { TextArea } from '@astryxdesign/core/TextArea';
+import { NumberInput } from '@astryxdesign/core/NumberInput';
+import { DateInput } from '@astryxdesign/core/DateInput';
+import { TimeInput } from '@astryxdesign/core/TimeInput';
 import { useApp } from '../context/AppContext';
 import { SkillLevel, SKILL_LABELS, SKILL_LEVEL_ORDER } from '../types/database';
-import { Image, MapPin, Upload, Trash2, CheckCircle2, Move, Clock, Calendar, Sparkles } from 'lucide-react';
+import { PROVINCES, DISTRICTS } from '../constants/locations';
+import { Upload, Trash2, CheckCircle2, Move, Clock, Sparkles } from 'lucide-react';
 
 const DEFAULT_COVER_PRESET =
   'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1200&auto=format&fit=crop&q=80';
@@ -80,16 +89,67 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const isSelectingFileRef = useRef(false);
   const resetSelectingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 1. Venue & Location states
+  // 1. Venue & Location states with Top-Down Filters
+  const [selectedCity, setSelectedCity] = useState<string>('HN'); // Default to Hà Nội
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL');
   const [selectedVenueId, setSelectedVenueId] = useState<string>('');
   const [venueName, setVenueName] = useState('');
   const [locationUrl, setLocationUrl] = useState('');
   const [courtNumbers, setCourtNumbers] = useState('Sân 1');
 
+  // Available districts based on selectedCity
+  const availableDistricts = useMemo(() => {
+    if (selectedCity === 'ALL') {
+      return DISTRICTS;
+    }
+    return DISTRICTS.filter(d => d.province_code === selectedCity);
+  }, [selectedCity]);
+
+  // Filtered venues based on top-down filters (City -> District)
+  const filteredVenues = useMemo(() => {
+    if (!venues || venues.length === 0) return [];
+    return venues.filter((v) => {
+      const d = DISTRICTS.find(item => item.code === v.district_code);
+      const venueProvince = d?.province_code || (v.district_code?.startsWith('HN') ? 'HN' : v.district_code?.startsWith('HCM') ? 'HCM' : v.district_code?.startsWith('DN') ? 'DN' : undefined);
+
+      if (selectedCity !== 'ALL' && venueProvince !== selectedCity) {
+        return false;
+      }
+      if (selectedDistrict !== 'ALL' && v.district_code !== selectedDistrict) {
+        return false;
+      }
+      return true;
+    });
+  }, [venues, selectedCity, selectedDistrict]);
+
   // Selected venue object (from database)
   const currentVenue = useMemo(() => {
     return venues.find(v => (selectedVenueId && v.id === selectedVenueId) || v.name === venueName);
   }, [venues, selectedVenueId, venueName]);
+
+  // Memoized options for Astryx Selector components
+  const cityOptions = useMemo(() => [
+    ...PROVINCES.map((p) => ({ value: p.code, label: p.name })),
+    { value: 'ALL', label: 'Tất cả thành phố' },
+  ], []);
+
+  const districtOptions = useMemo(() => [
+    { value: 'ALL', label: 'Tất cả quận / huyện' },
+    ...availableDistricts.map((d) => ({ value: d.code, label: d.name })),
+  ], [availableDistricts]);
+
+  const venueOptions = useMemo(() => {
+    if (filteredVenues.length === 0) {
+      return [{ value: '', label: '-- Không có sân nào trong khu vực này --' }];
+    }
+    return filteredVenues.map((v) => {
+      const d = DISTRICTS.find(item => item.code === v.district_code);
+      return {
+        value: v.id,
+        label: `🏸 ${v.name}${d ? ` (${d.name})` : ''}`,
+      };
+    });
+  }, [filteredVenues]);
 
   // 2. Cover Image states: "default" (from database) vs "custom" (user upload)
   const [coverMode, setCoverMode] = useState<'default' | 'custom'>('default');
@@ -135,17 +195,28 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     return formatLocalDate(d);
   }, []);
 
-  // Set default venue from database if available on first open
+  // Synchronize selected venue with filtered venues
   useEffect(() => {
-    if (venues && venues.length > 0 && !selectedVenueId) {
-      const defaultV = venues.find(v => v.name.includes('Quần Ngựa')) || venues[0];
-      if (defaultV) {
+    if (filteredVenues && filteredVenues.length > 0) {
+      const exists = filteredVenues.some(v => v.id === selectedVenueId);
+      if (!exists) {
+        const defaultV = (selectedCity === 'HN' && selectedDistrict === 'ALL')
+          ? (filteredVenues.find(v => v.name.includes('Quần Ngựa')) || filteredVenues[0])
+          : filteredVenues[0];
+
         setSelectedVenueId(defaultV.id);
         setVenueName(defaultV.name);
-        setLocationUrl(defaultV.maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(defaultV.name + ' ' + (defaultV.address || ''))}`);
+        setLocationUrl(
+          defaultV.maps_url ||
+          `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(defaultV.name + ' ' + (defaultV.address || ''))}`
+        );
       }
+    } else {
+      setSelectedVenueId('');
+      setVenueName('');
+      setLocationUrl('');
     }
-  }, [venues, selectedVenueId]);
+  }, [filteredVenues]);
 
   // Update auto-title when inputs change if not manually edited
   useEffect(() => {
@@ -311,6 +382,20 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     (level) => SKILL_LEVEL_ORDER.indexOf(level) >= minSkillIndex
   );
 
+  const minSkillOptions = useMemo(() => {
+    return SKILL_LEVEL_ORDER.map((k) => ({
+      value: k,
+      label: SKILL_LABELS[k].label,
+    }));
+  }, []);
+
+  const maxSkillOptions = useMemo(() => {
+    return allowedMaxSkillLevels.map((k) => ({
+      value: k,
+      label: SKILL_LABELS[k].label,
+    }));
+  }, [allowedMaxSkillLevels]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -393,197 +478,139 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             }}
           >
             <form id="create-event-form" onSubmit={handleSubmit}>
-              <VStack gap={4}>
-                {/* 1. Venue & Location via Google Maps */}
-                <VStack
-                  gap={2}
-                  style={{
-                    padding: 'var(--spacing-3)',
-                    background: 'var(--color-background-surface)',
-                    borderRadius: 'var(--radius-container)',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
-                  <HStack gap={1} style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                    <HStack gap={1} style={{ alignItems: 'center' }}>
-                      <MapPin size={16} color="var(--color-icon-accent)" />
-                      <Text weight="semibold">Địa điểm sân thi đấu *</Text>
-                    </HStack>
-                    {venues && venues.length > 0 && (
-                      <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
-                        ⚡ Chọn từ database để tự động điền thông tin & ảnh sân
+              <VStack gap={5}>
+                {/* 1. Venue & Location with Top-Down Filters */}
+                <VStack gap={3}>
+                  <Heading level={3}>Địa điểm sân thi đấu *</Heading>
+
+                  {/* Top-Down Filters: Thành phố & Quận / Huyện */}
+                  <HStack gap={2} style={{ width: '100%', flexWrap: 'wrap' }}>
+                    <VStack gap={1} style={{ flex: 1, minWidth: '140px' }}>
+                      <Text type="supporting" weight="medium" style={{ fontSize: '12px' }}>
+                        Thành phố
                       </Text>
-                    )}
+                      <Selector
+                        label="Thành phố"
+                        isLabelHidden={true}
+                        size="md"
+                        value={selectedCity}
+                        onChange={(val) => {
+                          setSelectedCity(val);
+                          setSelectedDistrict('ALL');
+                        }}
+                        options={cityOptions}
+                        width="100%"
+                      />
+                    </VStack>
+
+                    <VStack gap={1} style={{ flex: 1, minWidth: '160px' }}>
+                      <Text type="supporting" weight="medium" style={{ fontSize: '12px' }}>
+                        Quận / Huyện
+                      </Text>
+                      <Selector
+                        label="Quận / Huyện"
+                        isLabelHidden={true}
+                        size="md"
+                        value={selectedDistrict}
+                        onChange={(val) => setSelectedDistrict(val)}
+                        options={districtOptions}
+                        width="100%"
+                      />
+                    </VStack>
                   </HStack>
 
-                  {/* Quick Select Venue from Database */}
-                  {venues && venues.length > 0 && (
-                    <VStack gap={1}>
+                  {/* Filtered Venues Dropdown using Astryx Selector */}
+                  <VStack gap={1} style={{ width: '100%' }}>
+                    <HStack style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                       <Text type="supporting" weight="medium" style={{ fontSize: '12px' }}>
-                        🏟️ Chọn sân có sẵn trong cơ sở dữ liệu:
+                        Sân thi đấu *
                       </Text>
-                      <Select
-                        value={selectedVenueId}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSelectedVenueId(val);
-                          if (!val) return;
-                          const selected = venues.find(v => v.id === val);
-                          if (selected) {
-                            setVenueName(selected.name);
-                            if (selected.maps_url) {
-                              setLocationUrl(selected.maps_url);
-                            } else {
-                              setLocationUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.name + ' ' + (selected.address || ''))}`);
-                            }
+                      <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
+                        {filteredVenues.length > 0 ? `(${filteredVenues.length} sân phù hợp)` : '(Không có sân)'}
+                      </Text>
+                    </HStack>
+                    <Selector
+                      label="Sân thi đấu"
+                      isLabelHidden={true}
+                      size="md"
+                      hasSearch
+                      placeholder={filteredVenues.length > 0 ? "-- Chọn sân thi đấu --" : "-- Không có sân nào trong khu vực này --"}
+                      value={selectedVenueId}
+                      onChange={(val) => {
+                        setSelectedVenueId(val);
+                        if (!val) return;
+                        const selected = venues.find(v => v.id === val);
+                        if (selected) {
+                          setVenueName(selected.name);
+                          if (selected.maps_url) {
+                            setLocationUrl(selected.maps_url);
+                          } else {
+                            setLocationUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.name + ' ' + (selected.address || ''))}`);
                           }
-                        }}
-                        style={{
-                          padding: 'var(--spacing-2)',
-                          borderRadius: 'var(--radius-element)',
-                          border: '1px solid var(--color-border)',
-                          backgroundColor: 'var(--color-background-muted)',
-                          fontSize: '13px',
-                          cursor: 'pointer',
-                          fontWeight: 500,
-                        }}
-                      >
-                        <option value="">-- Chọn nhanh sân trong database (hoặc tự nhập bên dưới) --</option>
-                        {venues.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            🏸 {v.name} ({v.district || 'Hà Nội'}) {v.price_range ? `· ${v.price_range}` : ''}
-                          </option>
-                        ))}
-                      </Select>
-                    </VStack>
-                  )}
+                        }
+                      }}
+                      options={venueOptions}
+                      width="100%"
+                    />
+                  </VStack>
 
+                  {/* Non-editable Venue Name & Editable Court Numbers using Astryx TextInput */}
                   <HStack gap={2} style={{ width: '100%', flexWrap: 'wrap' }}>
                     <VStack gap={1} style={{ flex: 2, minWidth: '240px' }}>
                       <Text type="supporting" weight="medium">Tên sân / Địa điểm *</Text>
-                      <input
-                        type="text"
-                        required
+                      <TextInput
+                        label="Tên sân / Địa điểm"
+                        isLabelHidden={true}
+                        isReadOnly={true}
                         value={venueName}
-                        onChange={(e) => setVenueName(e.target.value)}
-                        placeholder="Ví dụ: Sân Cầu Lông Cung Thể Thao Quần Ngựa"
-                        style={{
-                          padding: 'var(--spacing-2)',
-                          borderRadius: 'var(--radius-element)',
-                          border: '1px solid var(--color-border)',
-                          width: '100%',
-                        }}
+                        placeholder="Tên sân tự động cập nhật khi chọn sân"
+                        size="md"
+                        style={{ width: '100%' }}
                       />
+                      {currentVenue?.address && (
+                        <Text type="supporting" color="secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
+                          📍 {currentVenue.address}
+                        </Text>
+                      )}
                     </VStack>
 
                     <VStack gap={1} style={{ flex: 1, minWidth: '120px' }}>
                       <Text type="supporting" weight="medium">Số sân</Text>
-                      <input
-                        type="text"
+                      <TextInput
+                        label="Số sân"
+                        isLabelHidden={true}
                         value={courtNumbers}
-                        onChange={(e) => setCourtNumbers(e.target.value)}
+                        onChange={(val) => setCourtNumbers(val)}
                         placeholder="Sân 1, Sân 2"
-                        style={{
-                          padding: 'var(--spacing-2)',
-                          borderRadius: 'var(--radius-element)',
-                          border: '1px solid var(--color-border)',
-                          width: '100%',
-                        }}
+                        size="md"
+                        style={{ width: '100%' }}
                       />
                     </VStack>
                   </HStack>
-
-                  <VStack gap={1}>
-                    <Text type="supporting" weight="medium">Link vị trí Google Maps (URL) *</Text>
-                    <input
-                      type="url"
-                      required
-                      value={locationUrl}
-                      onChange={(e) => setLocationUrl(e.target.value)}
-                      placeholder="Dán link từ Google Maps: https://maps.app.goo.gl/... hoặc https://google.com/maps/..."
-                      style={{
-                        padding: 'var(--spacing-2)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                        width: '100%',
-                      }}
-                    />
-                    <Text type="supporting" color="secondary" style={{ fontSize: '12px' }}>
-                      💡 Mở Google Maps, tìm sân, nhấn <b>Chia sẻ</b> và sao chép liên kết dán vào đây để người chơi bấm vào chỉ đường chính xác.
-                    </Text>
-                  </VStack>
                 </VStack>
 
-                {/* 2. Cover Image Section (Directly below Venue section) */}
-                <VStack
-                  gap={2}
-                  style={{
-                    padding: 'var(--spacing-3)',
-                    background: 'var(--color-background-surface)',
-                    borderRadius: 'var(--radius-container)',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
+                <Divider variant="subtle" />
+
+                {/* 2. Cover Image Section */}
+                <VStack gap={3}>
                   <HStack gap={1} style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                    <HStack gap={1} style={{ alignItems: 'center' }}>
-                      <Image size={16} color="var(--color-icon-accent)" />
-                      <Text weight="semibold">Ảnh bìa sự kiện</Text>
-                    </HStack>
+                    <Heading level={3}>Ảnh bìa sự kiện</Heading>
                     <Text type="supporting" color="secondary" style={{ fontSize: '12px' }}>
                       Không bắt buộc tải ảnh
                     </Text>
                   </HStack>
 
-                  {/* Mode Selector: Mặc định vs Tuỳ chọn */}
-                  <HStack
-                    gap={1}
-                    style={{
-                      background: 'var(--color-background-muted)',
-                      padding: '3px',
-                      borderRadius: 'var(--radius-element)',
-                      border: '1px solid var(--color-border)',
-                      width: '100%',
-                    }}
+                  {/* Mode Selector using Astryx SegmentedControl */}
+                  <SegmentedControl
+                    label="Chế độ ảnh bìa"
+                    value={coverMode}
+                    onChange={(val) => setCoverMode(val as 'default' | 'custom')}
+                    layout="fill"
+                    size="md"
                   >
-                    <button
-                      type="button"
-                      onClick={() => setCoverMode('default')}
-                      style={{
-                        flex: 1,
-                        padding: '7px 12px',
-                        borderRadius: 'var(--radius-element)',
-                        fontSize: '13px',
-                        fontWeight: coverMode === 'default' ? 600 : 500,
-                        cursor: 'pointer',
-                        border: 'none',
-                        backgroundColor: coverMode === 'default' ? 'var(--color-background-surface)' : 'transparent',
-                        color: coverMode === 'default' ? 'var(--color-foreground)' : 'var(--color-foreground-secondary)',
-                        boxShadow: coverMode === 'default' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      Mặc định (Từ dữ liệu sân)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCoverMode('custom')}
-                      style={{
-                        flex: 1,
-                        padding: '7px 12px',
-                        borderRadius: 'var(--radius-element)',
-                        fontSize: '13px',
-                        fontWeight: coverMode === 'custom' ? 600 : 500,
-                        cursor: 'pointer',
-                        border: 'none',
-                        backgroundColor: coverMode === 'custom' ? 'var(--color-background-surface)' : 'transparent',
-                        color: coverMode === 'custom' ? 'var(--color-foreground)' : 'var(--color-foreground-secondary)',
-                        boxShadow: coverMode === 'custom' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      Tuỳ chọn (Tự tải ảnh)
-                    </button>
-                  </HStack>
+                    <SegmentedControlItem value="default" label="Mặc định (Từ dữ liệu sân)" />
+                    <SegmentedControlItem value="custom" label="Tuỳ chọn (Tự tải ảnh)" />
+                  </SegmentedControl>
 
                   {/* Hidden File Input for Custom Upload */}
                   <input
@@ -805,135 +832,79 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                   )}
                 </VStack>
 
+                <Divider variant="subtle" />
+
                 {/* 3. Date & Time */}
-                <VStack
-                  gap={2}
-                  style={{
-                    padding: 'var(--spacing-3)',
-                    background: 'var(--color-background-surface)',
-                    borderRadius: 'var(--radius-container)',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
+                <VStack gap={3}>
                   <VStack gap={1}>
                     <HStack gap={1} style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <HStack gap={1} style={{ alignItems: 'center' }}>
-                        <Calendar size={16} color="var(--color-icon-accent)" />
-                        <Text weight="semibold">Ngày diễn ra *</Text>
-                      </HStack>
+                      <Heading level={3}>Thời gian diễn ra *</Heading>
 
-                      {/* Quick Date Chips: Hôm nay, Ngày mai, Ngày kia */}
+                      {/* Quick Date Chips using Astryx Button */}
                       <HStack gap={1}>
-                        <button
-                          type="button"
+                        <Button
+                          size="sm"
+                          variant={startDate === todayStr ? 'primary' : 'secondary'}
+                          label="Hôm nay"
                           onClick={() => setStartDate(todayStr)}
-                          style={{
-                            padding: '3px 10px',
-                            borderRadius: 'var(--radius-pill, 9999px)',
-                            fontSize: '12px',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            border: startDate === todayStr ? '1px solid var(--color-interactive-primary)' : '1px solid var(--color-border)',
-                            backgroundColor: startDate === todayStr ? 'var(--color-interactive-subtle, rgba(239, 68, 68, 0.1))' : 'var(--color-surface)',
-                            color: startDate === todayStr ? 'var(--color-interactive-primary)' : 'var(--color-foreground)',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          Hôm nay
-                        </button>
-                        <button
-                          type="button"
+                        />
+                        <Button
+                          size="sm"
+                          variant={startDate === tomorrowStr ? 'primary' : 'secondary'}
+                          label="Ngày mai"
                           onClick={() => setStartDate(tomorrowStr)}
-                          style={{
-                            padding: '3px 10px',
-                            borderRadius: 'var(--radius-pill, 9999px)',
-                            fontSize: '12px',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            border: startDate === tomorrowStr ? '1px solid var(--color-interactive-primary)' : '1px solid var(--color-border)',
-                            backgroundColor: startDate === tomorrowStr ? 'var(--color-interactive-subtle, rgba(239, 68, 68, 0.1))' : 'var(--color-surface)',
-                            color: startDate === tomorrowStr ? 'var(--color-interactive-primary)' : 'var(--color-foreground)',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          Ngày mai
-                        </button>
-                        <button
-                          type="button"
+                        />
+                        <Button
+                          size="sm"
+                          variant={startDate === dayAfterStr ? 'primary' : 'secondary'}
+                          label="Ngày kia"
                           onClick={() => setStartDate(dayAfterStr)}
-                          style={{
-                            padding: '3px 10px',
-                            borderRadius: 'var(--radius-pill, 9999px)',
-                            fontSize: '12px',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            border: startDate === dayAfterStr ? '1px solid var(--color-interactive-primary)' : '1px solid var(--color-border)',
-                            backgroundColor: startDate === dayAfterStr ? 'var(--color-interactive-subtle, rgba(239, 68, 68, 0.1))' : 'var(--color-surface)',
-                            color: startDate === dayAfterStr ? 'var(--color-interactive-primary)' : 'var(--color-foreground)',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          Ngày kia
-                        </button>
+                        />
                       </HStack>
                     </HStack>
 
-                    <input
-                      type="date"
-                      required
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      style={{
-                        padding: 'var(--spacing-2)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                        width: '100%',
+                    <DateInput
+                      label="Ngày diễn ra"
+                      isLabelHidden={true}
+                      value={startDate || undefined}
+                      onChange={(val) => {
+                        if (val) setStartDate(val);
                       }}
+                      size="md"
+                      width="100%"
                     />
                   </VStack>
 
                   {/* Bắt đầu & Số giờ chơi */}
                   <HStack gap={3} style={{ width: '100%', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                     <VStack gap={1} style={{ width: '140px' }}>
-                      <Text weight="semibold">Bắt đầu *</Text>
-                      <input
-                        type="time"
-                        required
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        style={{
-                          padding: 'var(--spacing-2)',
-                          borderRadius: 'var(--radius-element)',
-                          border: '1px solid var(--color-border)',
-                          width: '100%',
+                      <Text type="supporting" weight="medium">Bắt đầu *</Text>
+                      <TimeInput
+                        label="Bắt đầu"
+                        isLabelHidden={true}
+                        hourFormat="24h"
+                        value={startTime || undefined}
+                        onChange={(t) => {
+                          if (t) setStartTime(t);
                         }}
+                        size="md"
+                        width="100%"
                       />
                     </VStack>
 
                     <VStack gap={1} style={{ flex: 1, minWidth: '240px' }}>
-                      <Text weight="semibold">Số giờ chơi</Text>
+                      <Text type="supporting" weight="medium">Số giờ chơi</Text>
                       <HStack gap={1} style={{ flexWrap: 'wrap' }}>
                         {DURATION_OPTIONS.map((d) => {
                           const isSelected = durationMinutes === d.minutes;
                           return (
-                            <button
+                            <Button
                               key={d.minutes}
-                              type="button"
+                              size="sm"
+                              variant={isSelected ? 'primary' : 'secondary'}
+                              label={d.label}
                               onClick={() => setDurationMinutes(d.minutes)}
-                              style={{
-                                padding: '5px 12px',
-                                borderRadius: 'var(--radius-pill, 9999px)',
-                                fontSize: '12px',
-                                fontWeight: isSelected ? 600 : 500,
-                                cursor: 'pointer',
-                                border: isSelected ? '1px solid var(--color-interactive-primary)' : '1px solid var(--color-border)',
-                                backgroundColor: isSelected ? 'var(--color-interactive-subtle, rgba(239, 68, 68, 0.1))' : 'var(--color-surface)',
-                                color: isSelected ? 'var(--color-interactive-primary)' : 'var(--color-foreground)',
-                                transition: 'all 0.15s ease',
-                              }}
-                            >
-                              {d.label}
-                            </button>
+                            />
                           );
                         })}
                       </HStack>
@@ -966,97 +937,77 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                   </HStack>
                 </VStack>
 
-                {/* 4. Slot tối thiểu đứng trước Slot tối đa (tính từ trái qua phải) */}
-                <HStack gap={3} style={{ width: '100%', flexWrap: 'wrap' }}>
-                  <VStack gap={1} style={{ flex: 1, minWidth: '140px' }}>
-                    <Text weight="semibold">Slot tối thiểu</Text>
-                    <input
-                      type="number"
-                      min="2"
-                      value={minPlayers}
-                      onChange={(e) => setMinPlayers(e.target.value)}
-                      placeholder="4"
-                      style={{
-                        padding: 'var(--spacing-2)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                        width: '100%',
-                      }}
-                    />
-                  </VStack>
+                <Divider variant="subtle" />
 
-                  <VStack gap={1} style={{ flex: 1, minWidth: '140px' }}>
-                    <Text weight="semibold">Slot tối đa *</Text>
-                    <input
-                      type="number"
-                      required
-                      min="2"
-                      value={maxPlayers}
-                      onChange={(e) => setMaxPlayers(e.target.value)}
-                      placeholder="8"
-                      style={{
-                        padding: 'var(--spacing-2)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                        width: '100%',
-                      }}
-                    />
-                  </VStack>
-                </HStack>
+                {/* 4. Slot & Skill */}
+                <VStack gap={3}>
+                  <Heading level={3}>Quy mô & Trình độ</Heading>
 
-                {/* 5. Skill Requirement */}
-                <HStack gap={3} style={{ width: '100%', flexWrap: 'wrap' }}>
-                  <VStack gap={1} style={{ flex: 1, minWidth: '200px' }}>
-                    <Text weight="semibold">Trình độ tối thiểu *</Text>
-                    <Select
-                      value={minSkill}
-                      onChange={(e) => handleMinSkillChange(e.target.value as SkillLevel)}
-                      style={{
-                        padding: 'var(--spacing-2)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                        width: '100%',
-                      }}
-                    >
-                      {SKILL_LEVEL_ORDER.map((k) => (
-                        <option key={k} value={k}>
-                          {SKILL_LABELS[k].label}
-                        </option>
-                      ))}
-                    </Select>
-                  </VStack>
+                  {/* Slot tối thiểu đứng trước Slot tối đa using Astryx NumberInput */}
+                  <HStack gap={3} style={{ width: '100%', flexWrap: 'wrap' }}>
+                    <VStack gap={1} style={{ flex: 1, minWidth: '140px' }}>
+                      <Text type="supporting" weight="medium">Slot tối thiểu</Text>
+                      <NumberInput
+                        label="Slot tối thiểu"
+                        isLabelHidden={true}
+                        value={Number(minPlayers) || 4}
+                        onChange={(val) => setMinPlayers(String(val ?? 4))}
+                        min={2}
+                        size="md"
+                        style={{ width: '100%' }}
+                      />
+                    </VStack>
 
-                  <VStack gap={1} style={{ flex: 1, minWidth: '200px' }}>
-                    <Text weight="semibold">Trình độ tối đa *</Text>
-                    <Select
-                      value={maxSkill}
-                      onChange={(e) => setMaxSkill(e.target.value as SkillLevel)}
-                      style={{
-                        padding: 'var(--spacing-2)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                        width: '100%',
-                      }}
-                    >
-                      {allowedMaxSkillLevels.map((k) => (
-                        <option key={k} value={k}>
-                          {SKILL_LABELS[k].label}
-                        </option>
-                      ))}
-                    </Select>
-                  </VStack>
-                </HStack>
+                    <VStack gap={1} style={{ flex: 1, minWidth: '140px' }}>
+                      <Text type="supporting" weight="medium">Slot tối đa *</Text>
+                      <NumberInput
+                        label="Slot tối đa"
+                        isLabelHidden={true}
+                        value={Number(maxPlayers) || 8}
+                        onChange={(val) => setMaxPlayers(String(val ?? 8))}
+                        min={2}
+                        size="md"
+                        isRequired
+                        style={{ width: '100%' }}
+                      />
+                    </VStack>
+                  </HStack>
 
-                {/* 6. Host Approval Toggle (Astryx Switch) */}
-                <VStack
-                  gap={1}
-                  style={{
-                    padding: 'var(--spacing-3)',
-                    background: 'var(--color-background-surface)',
-                    borderRadius: 'var(--radius-container)',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
+                  {/* Skill Requirement using Astryx Selector */}
+                  <HStack gap={3} style={{ width: '100%', flexWrap: 'wrap' }}>
+                    <VStack gap={1} style={{ flex: 1, minWidth: '200px' }}>
+                      <Text type="supporting" weight="medium">Trình độ tối thiểu *</Text>
+                      <Selector
+                        label="Trình độ tối thiểu"
+                        isLabelHidden={true}
+                        size="md"
+                        value={minSkill}
+                        onChange={(val) => handleMinSkillChange(val as SkillLevel)}
+                        options={minSkillOptions}
+                        width="100%"
+                      />
+                    </VStack>
+
+                    <VStack gap={1} style={{ flex: 1, minWidth: '200px' }}>
+                      <Text type="supporting" weight="medium">Trình độ tối đa *</Text>
+                      <Selector
+                        label="Trình độ tối đa"
+                        isLabelHidden={true}
+                        size="md"
+                        value={maxSkill}
+                        onChange={(val) => setMaxSkill(val as SkillLevel)}
+                        options={maxSkillOptions}
+                        width="100%"
+                      />
+                    </VStack>
+                  </HStack>
+                </VStack>
+
+                <Divider variant="subtle" />
+
+                {/* 5. Host Approval Toggle */}
+                <VStack gap={2}>
+                  <Heading level={3}>Cài đặt tham gia</Heading>
                   <Switch
                     label="Yêu cầu Host duyệt thủ công"
                     description="Khuyên dùng để kiểm tra trình độ & uy tín người chơi trước khi duyệt vào danh sách thi đấu"
@@ -1065,74 +1016,62 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                   />
                 </VStack>
 
-                {/* 7. Tiêu đề buổi chơi (Pre-filled format trích trực tiếp từ input, nằm trên Mô tả) */}
-                <VStack gap={1}>
-                  <HStack gap={1} style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text weight="semibold">Tiêu đề buổi chơi *</Text>
+                <Divider variant="subtle" />
+
+                {/* 6. Title & Description */}
+                <VStack gap={3}>
+                  <Heading level={3}>Thông tin buổi chơi</Heading>
+
+                  {/* Tiêu đề buổi chơi */}
+                  <VStack gap={1}>
+                    <HStack gap={1} style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text type="supporting" weight="medium">Tiêu đề buổi chơi *</Text>
                     {isTitleManuallyEdited && (
-                      <button
-                        type="button"
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        label="Làm mới theo mẫu tự động"
+                        icon={<Sparkles size={13} />}
                         onClick={() => {
                           setIsTitleManuallyEdited(false);
                           setTitle(generateAutoTitle(minSkill, maxSkill, startTime, endTime, startDate));
                         }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          color: 'var(--color-interactive-primary)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: 0,
-                        }}
-                      >
-                        <Sparkles size={13} />
-                        Làm mới theo mẫu tự động
-                      </button>
+                      />
                     )}
                   </HStack>
-                  <input
-                    type="text"
-                    required
+                  <TextInput
+                    label="Tiêu đề buổi chơi"
+                    isLabelHidden={true}
                     value={title}
-                    onChange={(e) => {
-                      setTitle(e.target.value);
+                    onChange={(val) => {
+                      setTitle(val);
                       setIsTitleManuallyEdited(true);
                     }}
                     placeholder="Ví dụ: Kèo giao lưu Trình TB - TB+ · 19:30 - 21:30 · Thứ Tư (07/10)"
-                    style={{
-                      padding: 'var(--spacing-2)',
-                      borderRadius: 'var(--radius-element)',
-                      border: '1px solid var(--color-border)',
-                      width: '100%',
-                      fontWeight: 500,
-                    }}
+                    size="md"
+                    isRequired
+                    style={{ width: '100%' }}
                   />
                   <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
                     💡 Tiêu đề được định dạng tự động từ trình độ, khung giờ và ngày thi đấu bạn đã chọn. Bạn có thể chỉnh sửa lại tuỳ thích.
                   </Text>
                 </VStack>
 
-                {/* 8. Mô tả & Lưu ý thêm */}
-                <VStack gap={1}>
-                  <Text weight="semibold">Mô tả & Lưu ý thêm</Text>
-                  <textarea
-                    rows={3}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Ghi chú về nước uống, chỗ gửi xe, cách ghép cặp..."
-                    style={{
-                      padding: 'var(--spacing-2)',
-                      borderRadius: 'var(--radius-element)',
-                      border: '1px solid var(--color-border)',
-                      width: '100%',
-                    }}
-                  />
+                  {/* Mô tả & Lưu ý thêm using Astryx TextArea */}
+                  <VStack gap={1}>
+                    <Text type="supporting" weight="medium">Mô tả & Lưu ý thêm</Text>
+                    <TextArea
+                      label="Mô tả & Lưu ý thêm"
+                      isLabelHidden={true}
+                      value={description}
+                      onChange={(val) => setDescription(val)}
+                      placeholder="Ghi chú về nước uống, chỗ gửi xe, cách ghép cặp..."
+                      style={{ width: '100%' }}
+                    />
                 </VStack>
               </VStack>
-            </form>
+            </VStack>
+          </form>
           </LayoutContent>
         }
         footer={

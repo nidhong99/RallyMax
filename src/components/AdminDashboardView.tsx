@@ -599,25 +599,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                               return v.district ? `${v.district}, ${v.city || ''}` : v.district_code;
                             })()}
                           </Text>
-                          {v.images_count !== undefined && v.images_count !== null && (
-                            <HStack style={{ marginTop: '2px' }}>
-                              <span
-                                style={{
-                                  fontSize: '10px',
-                                  padding: '1px 6px',
-                                  borderRadius: 'var(--radius-inner, 4px)',
-                                  backgroundColor: 'var(--color-surface-sunken)',
-                                  color: 'var(--color-text-secondary)',
-                                  border: '1px solid var(--color-border)',
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {v.images_count > 10
-                                  ? `Google: ${v.images_count} ảnh • Quản lý 10 ảnh`
-                                  : `Google: ${v.images_count} ảnh • Lấy toàn bộ`}
-                              </span>
-                            </HStack>
-                          )}
                         </VStack>
                       </td>
                       <td style={{ padding: 'var(--spacing-3)' }}>
