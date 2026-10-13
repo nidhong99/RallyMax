@@ -133,7 +133,7 @@ export const Select = React.forwardRef<any, SelectProps>((props, ref) => {
         placement={placement}
         presentation={presentation}
         width="100%"
-        style={{
+        controlStyle={{
           width: '100%',
           ...style,
         }}

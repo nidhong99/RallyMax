@@ -565,7 +565,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                         value={venueName}
                         placeholder="Tên sân tự động cập nhật khi chọn sân"
                         size="md"
-                        style={{ width: '100%' }}
+                        controlStyle={{ width: '100%' }}
                       />
                       {currentVenue?.address && (
                         <Text type="supporting" color="secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
@@ -583,7 +583,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                         onChange={(val) => setCourtNumbers(val)}
                         placeholder="Sân 1, Sân 2"
                         size="md"
-                        style={{ width: '100%' }}
+                        controlStyle={{ width: '100%' }}
                       />
                     </VStack>
                   </HStack>
@@ -954,7 +954,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                         onChange={(val) => setMinPlayers(String(val ?? 4))}
                         min={2}
                         size="md"
-                        style={{ width: '100%' }}
+                        controlStyle={{ width: '100%' }}
                       />
                     </VStack>
 
@@ -968,7 +968,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                         min={2}
                         size="md"
                         isRequired
-                        style={{ width: '100%' }}
+                        controlStyle={{ width: '100%' }}
                       />
                     </VStack>
                   </HStack>
@@ -1050,7 +1050,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     placeholder="Ví dụ: Kèo giao lưu Trình TB - TB+ · 19:30 - 21:30 · Thứ Tư (07/10)"
                     size="md"
                     isRequired
-                    style={{ width: '100%' }}
+                    controlStyle={{ width: '100%' }}
                   />
                   <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
                     💡 Tiêu đề được định dạng tự động từ trình độ, khung giờ và ngày thi đấu bạn đã chọn. Bạn có thể chỉnh sửa lại tuỳ thích.
@@ -1066,7 +1066,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                       value={description}
                       onChange={(val) => setDescription(val)}
                       placeholder="Ghi chú về nước uống, chỗ gửi xe, cách ghép cặp..."
-                      style={{ width: '100%' }}
+                      controlStyle={{ width: '100%' }}
                     />
                 </VStack>
               </VStack>
