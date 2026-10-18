@@ -11,7 +11,7 @@ import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } f
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Event, SKILL_LABELS, PLAY_STYLE_LABELS } from '../types/database';
 import { useApp } from '../context/AppContext';
-import { MapPin, Clock, Users, Shield, DollarSign, AlertTriangle, CheckCircle2, QrCode, ExternalLink } from 'lucide-react';
+import { MapPin, Clock, Users, Shield, DollarSign, AlertTriangle, CheckCircle2, QrCode, ExternalLink, Copy } from 'lucide-react';
 
 const DEFAULT_EVENT_COVER =
   'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1200&auto=format&fit=crop&q=80';
@@ -21,12 +21,14 @@ interface EventDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenReview?: (event: Event) => void;
+  onCloneEvent?: (event: Event) => void;
 }
 
 export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   event,
   isOpen,
   onClose,
+  onCloneEvent,
 }) => {
   const {
     currentUser,
@@ -642,6 +644,18 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                   <VStack gap={2} style={{ width: '100%' }}>
                     {!isCancelling ? (
                       <HStack gap={2} style={{ justifyContent: 'flex-end', width: '100%', flexWrap: 'wrap' }}>
+                        {onCloneEvent && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={<Copy size={14} />}
+                            label="Sao chép tạo kèo mới"
+                            onClick={() => {
+                              onClose();
+                              onCloneEvent(event);
+                            }}
+                          />
+                        )}
                         {event.status !== 'CANCELLED' && (
                           <Button
                             variant="destructive"

@@ -6,6 +6,7 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } from '@astryxdesign/core/Table';
 import { Pagination } from '@astryxdesign/core/Pagination';
+import { Copy } from 'lucide-react';
 import { Event } from '../types/database';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -13,6 +14,7 @@ import { useLanguage } from '../context/LanguageContext';
 interface MyEventsViewProps {
   onSelectEvent: (event: Event) => void;
   onOpenCreateEvent: () => void;
+  onCloneEvent?: (event: Event) => void;
   onExplore?: () => void;
   onOpenReview?: (event: Event) => void;
 }
@@ -20,6 +22,7 @@ interface MyEventsViewProps {
 export const MyEventsView: React.FC<MyEventsViewProps> = ({
   onSelectEvent,
   onOpenCreateEvent,
+  onCloneEvent,
   onExplore,
   onOpenReview,
 }) => {
@@ -244,12 +247,23 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                       </TableCell>
 
                       <TableCell>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          label={language === 'vi' ? 'Quản lý / Điểm danh' : 'Manage / Check-in'}
-                          onClick={() => onSelectEvent(ev)}
-                        />
+                        <HStack gap={1} style={{ alignItems: 'center' }}>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            label={language === 'vi' ? 'Quản lý' : 'Manage'}
+                            onClick={() => onSelectEvent(ev)}
+                          />
+                          {onCloneEvent && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              icon={<Copy size={13} />}
+                              label={language === 'vi' ? 'Sao chép' : 'Clone'}
+                              onClick={() => onCloneEvent(ev)}
+                            />
+                          )}
+                        </HStack>
                       </TableCell>
                     </TableRow>
                   );

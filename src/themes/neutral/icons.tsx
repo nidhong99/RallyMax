@@ -40,6 +40,7 @@ import {
   Wrench,
   Square,
   Mic,
+  Upload,
 } from 'lucide-react';
 
 const iconProps = {
@@ -76,4 +77,5 @@ export const neutralIconRegistry: IconRegistry = {
   wrench: <Wrench {...iconProps} />,
   stop: <Square {...iconProps} />,
   microphone: <Mic {...iconProps} />,
+  upload: <Upload {...iconProps} />,
 };

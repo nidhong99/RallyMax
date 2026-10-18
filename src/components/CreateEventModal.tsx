@@ -14,10 +14,12 @@ import { TextArea } from '@astryxdesign/core/TextArea';
 import { NumberInput } from '@astryxdesign/core/NumberInput';
 import { DateInput } from '@astryxdesign/core/DateInput';
 import { TimeInput } from '@astryxdesign/core/TimeInput';
+import { Banner } from '@astryxdesign/core/Banner';
+import { FieldStatus } from '@astryxdesign/core/FieldStatus';
 import { useApp } from '../context/AppContext';
-import { SkillLevel, SKILL_LABELS, SKILL_LEVEL_ORDER } from '../types/database';
+import { SkillLevel, SKILL_LABELS, SKILL_LEVEL_ORDER, Event } from '../types/database';
 import { PROVINCES, DISTRICTS } from '../constants/locations';
-import { Upload, Trash2, CheckCircle2, Move, Clock, Sparkles } from 'lucide-react';
+import { Upload, Trash2, CheckCircle2, Move, Clock, Sparkles, Copy, Repeat, AlertCircle } from 'lucide-react';
 
 const DEFAULT_COVER_PRESET =
   'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1200&auto=format&fit=crop&q=80';
@@ -35,6 +37,19 @@ function formatLocalDate(d: Date): string {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function addDays(dateStr: string, daysToAdd: number): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + daysToAdd);
+  return formatLocalDate(d);
+}
+
+function formatDayOfWeekOnly(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  return days[d.getDay()] || '';
 }
 
 function calculateEndTime(start: string, durationMin: number): string {
@@ -75,19 +90,48 @@ function generateAutoTitle(min: SkillLevel, max: SkillLevel, start: string, end:
   return `Kèo giao lưu ${skillPart} · ${timePart} · ${datePart}`;
 }
 
+export const RedAsterisk: React.FC = () => (
+  <Text
+    as="span"
+    style={{
+      color: 'var(--color-text-critical, #dc2626)',
+      fontWeight: 'bold',
+      marginLeft: '3px',
+    }}
+  >
+    *
+  </Text>
+);
+
 interface CreateEventModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialEvent?: Event | null;
 }
 
 export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   isOpen,
   onClose,
+  initialEvent,
 }) => {
-  const { createEvent, venues } = useApp();
+  const { createEvent, venues, events, currentUser, isAdmin } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isSelectingFileRef = useRef(false);
   const resetSelectingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Validation & Error states
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Clone feature states
+  const [clonedFromTitle, setClonedFromTitle] = useState<string | null>(null);
+  const [clonedEventId, setClonedEventId] = useState<string>('');
+
+  // Repeat event feature states
+  const [isRepeating, setIsRepeating] = useState(false);
+  const [repeatFrequency, setRepeatFrequency] = useState<'WEEKLY' | 'DAILY'>('WEEKLY');
+  const [repeatCount, setRepeatCount] = useState<number>(4);
 
   // 1. Venue & Location states with Top-Down Filters
   const [selectedCity, setSelectedCity] = useState<string>('HN'); // Default to Hà Nội
@@ -126,6 +170,16 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const currentVenue = useMemo(() => {
     return venues.find(v => (selectedVenueId && v.id === selectedVenueId) || v.name === venueName);
   }, [venues, selectedVenueId, venueName]);
+
+  // Available events that can be cloned (Host's own events first, or any recent events)
+  const availableEventsToClone = useMemo(() => {
+    if (!events || events.length === 0) return [];
+    const hostEvents = events.filter(
+      (e) => e.host_id === currentUser?.id || e.host?.id === currentUser?.id || (currentUser?.email || '').toLowerCase() === 'nidhong99@gmail.com'
+    );
+    if (hostEvents.length > 0) return hostEvents;
+    return events.slice(0, 10);
+  }, [events, currentUser]);
 
   // Memoized options for Astryx Selector components
   const cityOptions = useMemo(() => [
@@ -166,6 +220,25 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [durationMinutes, setDurationMinutes] = useState(120); // 2 hours default
   const endTime = useMemo(() => calculateEndTime(startTime, durationMinutes), [startTime, durationMinutes]);
 
+  // Dynamic preview dates for repeat feature
+  const repeatDates = useMemo(() => {
+    if (!isRepeating) return [];
+    const list: { dayOfWeek: string; formattedDate: string; isoDate: string }[] = [];
+    const count = Math.min(Math.max(repeatCount, 2), 12);
+    for (let i = 0; i < count; i++) {
+      const offset = repeatFrequency === 'WEEKLY' ? i * 7 : i;
+      const dStr = addDays(startDate, offset);
+      const d = new Date(dStr + 'T00:00:00');
+      const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+      list.push({
+        dayOfWeek: days[d.getDay()] || '',
+        formattedDate: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`,
+        isoDate: dStr,
+      });
+    }
+    return list;
+  }, [isRepeating, repeatFrequency, repeatCount, startDate]);
+
   // 4. Slots (Slot tối thiểu trước, Slot tối đa sau)
   const [minPlayers, setMinPlayers] = useState('4');
   const [maxPlayers, setMaxPlayers] = useState('8');
@@ -181,6 +254,86 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [title, setTitle] = useState('');
   const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
   const [description, setDescription] = useState('');
+
+  // Apply clone from an existing event
+  const handleApplyCloneEvent = (ev: Event) => {
+    if (!ev) return;
+    const matchedV = venues.find(v => v.id === ev.venue_id || v.name === ev.venue_name);
+    if (matchedV) {
+      const d = DISTRICTS.find(item => item.code === matchedV.district_code);
+      const venueProvince = d?.province_code || (matchedV.district_code?.startsWith('HN') ? 'HN' : matchedV.district_code?.startsWith('HCM') ? 'HCM' : matchedV.district_code?.startsWith('DN') ? 'DN' : undefined);
+      if (venueProvince) setSelectedCity(venueProvince);
+      if (matchedV.district_code) setSelectedDistrict(matchedV.district_code);
+      setSelectedVenueId(matchedV.id);
+      setVenueName(matchedV.name);
+      setLocationUrl(matchedV.maps_url || ev.location_url || '');
+    } else {
+      setSelectedVenueId(ev.venue_id || '');
+      setVenueName(ev.venue_name || '');
+      setLocationUrl(ev.location_url || '');
+    }
+
+    setCourtNumbers(ev.court_numbers || 'Sân 1');
+
+    if (ev.cover_image_url && !ev.cover_image_url.includes('unsplash.com')) {
+      setCoverMode('custom');
+      setCustomCoverUrl(ev.cover_image_url);
+      if (ev.cover_image_position) {
+        const parts = ev.cover_image_position.replace(/%/g, '').split(' ');
+        if (parts.length >= 2) {
+          setCoverPosition({ x: Number(parts[0]) || 50, y: Number(parts[1]) || 50 });
+        }
+      }
+    } else {
+      setCoverMode('default');
+    }
+
+    try {
+      const sDate = new Date(ev.start_time);
+      const eDate = new Date(ev.end_time);
+      const diffMin = Math.round((eDate.getTime() - sDate.getTime()) / 60000);
+      if (diffMin > 0) {
+        setDurationMinutes(diffMin);
+      }
+      const h = String(sDate.getHours()).padStart(2, '0');
+      const m = String(sDate.getMinutes()).padStart(2, '0');
+      if (!isNaN(Number(h)) && !isNaN(Number(m))) {
+        setStartTime(`${h}:${m}`);
+      }
+    } catch (err) {}
+
+    setMinPlayers(String(ev.min_players || 4));
+    setMaxPlayers(String(ev.max_players || 8));
+    setMinSkill(ev.min_skill_level || 'LOW_INTERMEDIATE');
+    setMaxSkill(ev.max_skill_level || 'HIGH_INTERMEDIATE');
+    setRequiresApproval(ev.requires_approval ?? true);
+    setDescription(ev.description || '');
+
+    setIsTitleManuallyEdited(false);
+    setClonedFromTitle(ev.title);
+    setClonedEventId(ev.id);
+    setErrors({});
+  };
+
+  // Synchronize when initialEvent is passed via props
+  useEffect(() => {
+    if (isOpen && initialEvent) {
+      handleApplyCloneEvent(initialEvent);
+    }
+  }, [isOpen, initialEvent]);
+
+  // Reset modal state upon closing
+  useEffect(() => {
+    if (!isOpen) {
+      setErrors({});
+      setHasSubmitted(false);
+      setClonedFromTitle(null);
+      setClonedEventId('');
+      setIsRepeating(false);
+      setRepeatCount(4);
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
 
   // Quick date options
   const todayStr = useMemo(() => formatLocalDate(new Date()), []);
@@ -398,44 +551,100 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const newErrors: Record<string, string> = {};
+
+    if (!selectedVenueId && !venueName.trim()) {
+      newErrors.venue = 'Vui lòng chọn sân thi đấu trong danh sách';
+    }
+    if (!startDate) {
+      newErrors.startDate = 'Vui lòng chọn ngày diễn ra';
+    }
+    if (!startTime) {
+      newErrors.startTime = 'Vui lòng chọn giờ bắt đầu';
+    }
+    const maxP = Number(maxPlayers);
+    const minP = Number(minPlayers);
+    if (isNaN(maxP) || maxP < 2) {
+      newErrors.maxPlayers = 'Số lượng slot tối đa phải từ 2 người trở lên';
+    } else if (maxP < minP) {
+      newErrors.maxPlayers = 'Slot tối đa không thể nhỏ hơn slot tối thiểu';
+    }
     if (!title.trim()) {
-      alert('Vui lòng nhập tiêu đề sự kiện');
-      return;
-    }
-    if (!venueName.trim()) {
-      alert('Vui lòng nhập tên địa điểm sân');
-      return;
+      newErrors.title = 'Vui lòng nhập tiêu đề sự kiện';
     }
 
-    const startIso = `${startDate}T${startTime}:00+07:00`;
-    const endIso = `${startDate}T${endTime}:00+07:00`;
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setHasSubmitted(true);
+      const scrollContainer = document.getElementById('create-event-scroll-container');
+      if (scrollContainer) {
+        scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
 
-    // Determine final cover image
-    const finalCoverUrl =
-      coverMode === 'custom' && customCoverUrl
-        ? customCoverUrl
-        : (currentVenue?.image_url || DEFAULT_COVER_PRESET);
+    setIsSubmitting(true);
+    try {
+      // Determine final cover image
+      const finalCoverUrl =
+        coverMode === 'custom' && customCoverUrl
+          ? customCoverUrl
+          : (currentVenue?.image_url || DEFAULT_COVER_PRESET);
 
-    await createEvent({
-      venue_id: currentVenue?.id || selectedVenueId || undefined,
-      venue_name: venueName,
-      location_url: locationUrl,
-      court_numbers: courtNumbers,
-      cover_image_url: finalCoverUrl,
-      cover_image_position: `${coverPosition.x}% ${coverPosition.y}%`,
-      start_time: startIso,
-      end_time: endIso,
-      fee_per_player: 0,
-      max_players: Number(maxPlayers) || 8,
-      min_players: Number(minPlayers) || 4,
-      min_skill_level: minSkill,
-      max_skill_level: maxSkill,
-      requires_approval: requiresApproval,
-      title: title.trim(),
-      description: description.trim(),
-    });
+      const basePayload = {
+        venue_id: currentVenue?.id || selectedVenueId || undefined,
+        venue_name: venueName,
+        location_url: locationUrl,
+        court_numbers: courtNumbers,
+        cover_image_url: finalCoverUrl,
+        cover_image_position: `${coverPosition.x}% ${coverPosition.y}%`,
+        fee_per_player: 0,
+        max_players: Number(maxPlayers) || 8,
+        min_players: Number(minPlayers) || 4,
+        min_skill_level: minSkill,
+        max_skill_level: maxSkill,
+        requires_approval: requiresApproval,
+        description: description.trim(),
+      };
 
-    onClose();
+      if (isRepeating && repeatCount > 1) {
+        const count = Math.min(Math.max(repeatCount, 2), 12);
+        const datesToCreate = Array.from({ length: count }, (_, i) => {
+          const offset = repeatFrequency === 'WEEKLY' ? i * 7 : i;
+          return addDays(startDate, offset);
+        });
+
+        for (const dateItem of datesToCreate) {
+          const sIso = `${dateItem}T${startTime}:00+07:00`;
+          const eIso = `${dateItem}T${endTime}:00+07:00`;
+          const itemTitle = isTitleManuallyEdited
+            ? title
+            : generateAutoTitle(minSkill, maxSkill, startTime, endTime, dateItem);
+
+          await createEvent({
+            ...basePayload,
+            title: itemTitle,
+            start_time: sIso,
+            end_time: eIso,
+          });
+        }
+      } else {
+        const startIso = `${startDate}T${startTime}:00+07:00`;
+        const endIso = `${startDate}T${endTime}:00+07:00`;
+        await createEvent({
+          ...basePayload,
+          title: title.trim(),
+          start_time: startIso,
+          end_time: endIso,
+        });
+      }
+
+      onClose();
+    } catch (err: any) {
+      alert(err?.message || 'Có lỗi xảy ra khi tạo sự kiện');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -468,6 +677,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         }
         content={
           <LayoutContent
+            id="create-event-scroll-container"
             isScrollable={true}
             padding={4}
             style={{
@@ -479,9 +689,80 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
           >
             <form id="create-event-form" onSubmit={handleSubmit}>
               <VStack gap={5}>
+                {/* Error Banner when required fields are missing */}
+                {hasSubmitted && Object.keys(errors).length > 0 && (
+                  <Banner
+                    status="error"
+                    title="Vui lòng điền đầy đủ các thông tin bắt buộc"
+                    description={`Còn ${Object.keys(errors).length} mục thông tin chưa hợp lệ. Vui lòng kiểm tra các mục được viền đỏ bên dưới.`}
+                    collapsible={false}
+                  />
+                )}
+
+                {/* Cloned Confirmation Banner */}
+                {clonedFromTitle && (
+                  <Banner
+                    status="info"
+                    title={`Đã sao chép thông tin từ: "${clonedFromTitle}"`}
+                    description="Các thông tin sân, trình độ, số slot và mô tả đã được tự động điền sẵn. Hãy chọn ngày giờ diễn ra mong muốn trước khi đăng."
+                    isDismissable={true}
+                    onDismiss={() => setClonedFromTitle(null)}
+                  />
+                )}
+
+                {/* Quick Clone Bar */}
+                {availableEventsToClone.length > 0 && (
+                  <VStack
+                    gap={2}
+                    style={{
+                      padding: 'var(--spacing-3)',
+                      borderRadius: 'var(--radius-container)',
+                      background: 'var(--color-background-muted)',
+                      border: '1px dashed var(--color-border)',
+                    }}
+                  >
+                    <HStack style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                      <HStack gap={1} style={{ alignItems: 'center' }}>
+                        <Copy size={15} color="var(--color-icon-accent)" />
+                        <Text weight="semibold" style={{ fontSize: '13px' }}>
+                          Sao chép nhanh từ kèo cũ
+                        </Text>
+                      </HStack>
+                      <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
+                        Tự động điền sân, trình độ & quy mô
+                      </Text>
+                    </HStack>
+
+                    <Selector
+                      label="Chọn kèo mẫu để sao chép"
+                      isLabelHidden={true}
+                      placeholder="-- Chọn kèo cũ để sao chép thông tin nhanh --"
+                      size="md"
+                      value={clonedEventId}
+                      onChange={(val) => {
+                        setClonedEventId(val);
+                        const found = events.find((e) => e.id === val);
+                        if (found) {
+                          handleApplyCloneEvent(found);
+                        }
+                      }}
+                      options={[
+                        { value: '', label: '-- Chọn kèo cũ để sao chép thông tin nhanh --' },
+                        ...availableEventsToClone.map((e) => ({
+                          value: e.id,
+                          label: `📋 ${e.title} (${e.venue?.name || e.venue_name || 'Sân'})`,
+                        })),
+                      ]}
+                      width="100%"
+                    />
+                  </VStack>
+                )}
+
                 {/* 1. Venue & Location with Top-Down Filters */}
                 <VStack gap={3}>
-                  <Heading level={3}>Địa điểm sân thi đấu *</Heading>
+                  <Heading level={3}>
+                    Địa điểm sân thi đấu <RedAsterisk />
+                  </Heading>
 
                   {/* Top-Down Filters: Thành phố & Quận / Huyện */}
                   <HStack gap={2} style={{ width: '100%', flexWrap: 'wrap' }}>
@@ -523,41 +804,64 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                   <VStack gap={1} style={{ width: '100%' }}>
                     <HStack style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                       <Text type="supporting" weight="medium" style={{ fontSize: '12px' }}>
-                        Sân thi đấu *
+                        Sân thi đấu <RedAsterisk />
                       </Text>
                       <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
                         {filteredVenues.length > 0 ? `(${filteredVenues.length} sân phù hợp)` : '(Không có sân)'}
                       </Text>
                     </HStack>
-                    <Selector
-                      label="Sân thi đấu"
-                      isLabelHidden={true}
-                      size="md"
-                      hasSearch
-                      placeholder={filteredVenues.length > 0 ? "-- Chọn sân thi đấu --" : "-- Không có sân nào trong khu vực này --"}
-                      value={selectedVenueId}
-                      onChange={(val) => {
-                        setSelectedVenueId(val);
-                        if (!val) return;
-                        const selected = venues.find(v => v.id === val);
-                        if (selected) {
-                          setVenueName(selected.name);
-                          if (selected.maps_url) {
-                            setLocationUrl(selected.maps_url);
-                          } else {
-                            setLocationUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.name + ' ' + (selected.address || ''))}`);
-                          }
-                        }
+
+                    <VStack
+                      gap={0}
+                      style={{
+                        borderRadius: 'var(--radius-element)',
+                        border: errors.venue ? '1.5px solid var(--color-border-critical, #dc2626)' : '1px solid transparent',
+                        boxShadow: errors.venue ? '0 0 0 1px var(--color-border-critical, #dc2626)' : undefined,
+                        transition: 'all 0.15s ease',
                       }}
-                      options={venueOptions}
-                      width="100%"
-                    />
+                    >
+                      <Selector
+                        label="Sân thi đấu"
+                        isLabelHidden={true}
+                        size="md"
+                        hasSearch
+                        placeholder={filteredVenues.length > 0 ? "-- Chọn sân thi đấu --" : "-- Không có sân nào trong khu vực này --"}
+                        value={selectedVenueId}
+                        onChange={(val) => {
+                          setSelectedVenueId(val);
+                          if (errors.venue) {
+                            setErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.venue;
+                              return next;
+                            });
+                          }
+                          if (!val) return;
+                          const selected = venues.find(v => v.id === val);
+                          if (selected) {
+                            setVenueName(selected.name);
+                            if (selected.maps_url) {
+                              setLocationUrl(selected.maps_url);
+                            } else {
+                              setLocationUrl(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.name + ' ' + (selected.address || ''))}`);
+                            }
+                          }
+                        }}
+                        options={venueOptions}
+                        width="100%"
+                      />
+                    </VStack>
+                    {errors.venue && (
+                      <FieldStatus type="error" message={errors.venue} variant="detached" />
+                    )}
                   </VStack>
 
                   {/* Non-editable Venue Name & Editable Court Numbers using Astryx TextInput */}
                   <HStack gap={2} style={{ width: '100%', flexWrap: 'wrap' }}>
                     <VStack gap={1} style={{ flex: 2, minWidth: '240px' }}>
-                      <Text type="supporting" weight="medium">Tên sân / Địa điểm *</Text>
+                      <Text type="supporting" weight="medium">
+                        Tên sân / Địa điểm <RedAsterisk />
+                      </Text>
                       <TextInput
                         label="Tên sân / Địa điểm"
                         isLabelHidden={true}
@@ -838,7 +1142,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 <VStack gap={3}>
                   <VStack gap={1}>
                     <HStack gap={1} style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <Heading level={3}>Thời gian diễn ra *</Heading>
+                      <Heading level={3}>
+                        Thời gian diễn ra <RedAsterisk />
+                      </Heading>
 
                       {/* Quick Date Chips using Astryx Button */}
                       <HStack gap={1}>
@@ -846,50 +1152,121 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                           size="sm"
                           variant={startDate === todayStr ? 'primary' : 'secondary'}
                           label="Hôm nay"
-                          onClick={() => setStartDate(todayStr)}
+                          onClick={() => {
+                            setStartDate(todayStr);
+                            if (errors.startDate) {
+                              setErrors((prev) => {
+                                const next = { ...prev };
+                                delete next.startDate;
+                                return next;
+                              });
+                            }
+                          }}
                         />
                         <Button
                           size="sm"
                           variant={startDate === tomorrowStr ? 'primary' : 'secondary'}
                           label="Ngày mai"
-                          onClick={() => setStartDate(tomorrowStr)}
+                          onClick={() => {
+                            setStartDate(tomorrowStr);
+                            if (errors.startDate) {
+                              setErrors((prev) => {
+                                const next = { ...prev };
+                                delete next.startDate;
+                                return next;
+                              });
+                            }
+                          }}
                         />
                         <Button
                           size="sm"
                           variant={startDate === dayAfterStr ? 'primary' : 'secondary'}
                           label="Ngày kia"
-                          onClick={() => setStartDate(dayAfterStr)}
+                          onClick={() => {
+                            setStartDate(dayAfterStr);
+                            if (errors.startDate) {
+                              setErrors((prev) => {
+                                const next = { ...prev };
+                                delete next.startDate;
+                                return next;
+                              });
+                            }
+                          }}
                         />
                       </HStack>
                     </HStack>
 
-                    <DateInput
-                      label="Ngày diễn ra"
-                      isLabelHidden={true}
-                      value={startDate || undefined}
-                      onChange={(val) => {
-                        if (val) setStartDate(val);
+                    <VStack
+                      gap={0}
+                      style={{
+                        borderRadius: 'var(--radius-element)',
+                        border: errors.startDate ? '1.5px solid var(--color-border-critical, #dc2626)' : '1px solid transparent',
+                        boxShadow: errors.startDate ? '0 0 0 1px var(--color-border-critical, #dc2626)' : undefined,
                       }}
-                      size="md"
-                      width="100%"
-                    />
+                    >
+                      <DateInput
+                        label="Ngày diễn ra"
+                        isLabelHidden={true}
+                        value={(startDate || undefined) as any}
+                        onChange={(val) => {
+                          if (val) {
+                            setStartDate(val);
+                            if (errors.startDate) {
+                              setErrors((prev) => {
+                                const next = { ...prev };
+                                delete next.startDate;
+                                return next;
+                              });
+                            }
+                          }
+                        }}
+                        size="md"
+                        width="100%"
+                      />
+                    </VStack>
+                    {errors.startDate && (
+                      <FieldStatus type="error" message={errors.startDate} variant="detached" />
+                    )}
                   </VStack>
 
                   {/* Bắt đầu & Số giờ chơi */}
                   <HStack gap={3} style={{ width: '100%', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                     <VStack gap={1} style={{ width: '140px' }}>
-                      <Text type="supporting" weight="medium">Bắt đầu *</Text>
-                      <TimeInput
-                        label="Bắt đầu"
-                        isLabelHidden={true}
-                        hourFormat="24h"
-                        value={startTime || undefined}
-                        onChange={(t) => {
-                          if (t) setStartTime(t);
+                      <Text type="supporting" weight="medium">
+                        Bắt đầu <RedAsterisk />
+                      </Text>
+                      <VStack
+                        gap={0}
+                        style={{
+                          borderRadius: 'var(--radius-element)',
+                          border: errors.startTime ? '1.5px solid var(--color-border-critical, #dc2626)' : '1px solid transparent',
+                          boxShadow: errors.startTime ? '0 0 0 1px var(--color-border-critical, #dc2626)' : undefined,
                         }}
-                        size="md"
-                        width="100%"
-                      />
+                      >
+                        <TimeInput
+                          label="Bắt đầu"
+                          isLabelHidden={true}
+                          hourFormat="24h"
+                          value={(startTime || undefined) as any}
+                          onChange={(t) => {
+                            if (t) {
+                              setStartTime(t);
+                              if (errors.startTime) {
+                                setErrors((prev) => {
+                                  const next = { ...prev };
+                                  delete next.startTime;
+                                  return next;
+                                });
+                              }
+                            }
+                          }}
+                          size="md"
+                          width="100%"
+                        />
+                      </VStack>
+                      {errors.startTime && (
+                        <FieldStatus type="error" message={errors.startTime} variant="detached" />
+                      )}
                     </VStack>
 
                     <VStack gap={1} style={{ flex: 1, minWidth: '240px' }}>
@@ -939,7 +1316,105 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
                 <Divider variant="subtle" />
 
-                {/* 4. Slot & Skill */}
+                {/* 4. Repeat Event Feature */}
+                <VStack gap={2}>
+                  <Heading level={3}>Kèo lặp lại / Định kỳ</Heading>
+                  <Switch
+                    label="Tạo kèo định kỳ (Lặp lại nhiều buổi)"
+                    description="Tự động nhân bản các buổi giao lưu tiếp theo mà không cần tạo từng buổi một"
+                    value={isRepeating}
+                    onChange={(checked) => setIsRepeating(checked)}
+                  />
+
+                  {isRepeating && (
+                    <VStack
+                      gap={3}
+                      style={{
+                        padding: 'var(--spacing-3)',
+                        borderRadius: 'var(--radius-container)',
+                        background: 'var(--color-background-muted)',
+                        border: '1px solid var(--color-border)',
+                      }}
+                    >
+                      <HStack gap={2} style={{ width: '100%', flexWrap: 'wrap' }}>
+                        <VStack gap={1} style={{ flex: 1, minWidth: '180px' }}>
+                          <Text type="supporting" weight="medium" style={{ fontSize: '12px' }}>
+                            Tần suất lặp lại
+                          </Text>
+                          <Selector
+                            label="Tần suất lặp lại"
+                            isLabelHidden={true}
+                            size="md"
+                            value={repeatFrequency}
+                            onChange={(val) => setRepeatFrequency(val as 'WEEKLY' | 'DAILY')}
+                            options={[
+                              { value: 'WEEKLY', label: `Hàng tuần (Vào ${formatDayOfWeekOnly(startDate)})` },
+                              { value: 'DAILY', label: 'Hàng ngày liên tiếp' },
+                            ]}
+                            width="100%"
+                          />
+                        </VStack>
+
+                        <VStack gap={1} style={{ flex: 1, minWidth: '160px' }}>
+                          <Text type="supporting" weight="medium" style={{ fontSize: '12px' }}>
+                            Số buổi cần tạo
+                          </Text>
+                          <Selector
+                            label="Số buổi cần tạo"
+                            isLabelHidden={true}
+                            size="md"
+                            value={String(repeatCount)}
+                            onChange={(val) => setRepeatCount(Number(val) || 4)}
+                            options={[
+                              { value: '2', label: '2 buổi' },
+                              { value: '3', label: '3 buổi' },
+                              { value: '4', label: '4 buổi (~1 tháng)' },
+                              { value: '6', label: '6 buổi' },
+                              { value: '8', label: '8 buổi (~2 tháng)' },
+                            ]}
+                            width="100%"
+                          />
+                        </VStack>
+                      </HStack>
+
+                      {/* Dynamic Preview Dates */}
+                      <VStack gap={1}>
+                        <HStack gap={1} style={{ alignItems: 'center' }}>
+                          <Repeat size={14} color="var(--color-icon-accent)" />
+                          <Text weight="semibold" style={{ fontSize: '12px' }}>
+                            Lịch các buổi sẽ được tạo ({repeatDates.length} buổi):
+                          </Text>
+                        </HStack>
+                        <HStack gap={1} style={{ flexWrap: 'wrap' }}>
+                          {repeatDates.map((item, idx) => (
+                            <HStack
+                              key={idx}
+                              gap={1}
+                              style={{
+                                padding: '3px 8px',
+                                borderRadius: 'var(--radius-element)',
+                                background: 'var(--color-background-surface)',
+                                border: '1px solid var(--color-border)',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <Text style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-brand)' }}>
+                                Buổi {idx + 1}:
+                              </Text>
+                              <Text type="supporting" style={{ fontSize: '11px' }}>
+                                {item.dayOfWeek} ({item.formattedDate})
+                              </Text>
+                            </HStack>
+                          ))}
+                        </HStack>
+                      </VStack>
+                    </VStack>
+                  )}
+                </VStack>
+
+                <Divider variant="subtle" />
+
+                {/* 5. Slot & Skill */}
                 <VStack gap={3}>
                   <Heading level={3}>Quy mô & Trình độ</Heading>
 
@@ -959,24 +1434,49 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     </VStack>
 
                     <VStack gap={1} style={{ flex: 1, minWidth: '140px' }}>
-                      <Text type="supporting" weight="medium">Slot tối đa *</Text>
-                      <NumberInput
-                        label="Slot tối đa"
-                        isLabelHidden={true}
-                        value={Number(maxPlayers) || 8}
-                        onChange={(val) => setMaxPlayers(String(val ?? 8))}
-                        min={2}
-                        size="md"
-                        isRequired
-                        controlStyle={{ width: '100%' }}
-                      />
+                      <Text type="supporting" weight="medium">
+                        Slot tối đa <RedAsterisk />
+                      </Text>
+                      <VStack
+                        gap={0}
+                        style={{
+                          borderRadius: 'var(--radius-element)',
+                          border: errors.maxPlayers ? '1.5px solid var(--color-border-critical, #dc2626)' : '1px solid transparent',
+                          boxShadow: errors.maxPlayers ? '0 0 0 1px var(--color-border-critical, #dc2626)' : undefined,
+                        }}
+                      >
+                        <NumberInput
+                          label="Slot tối đa"
+                          isLabelHidden={true}
+                          value={Number(maxPlayers) || 8}
+                          onChange={(val) => {
+                            setMaxPlayers(String(val ?? 8));
+                            if (errors.maxPlayers) {
+                              setErrors((prev) => {
+                                const next = { ...prev };
+                                delete next.maxPlayers;
+                                return next;
+                              });
+                            }
+                          }}
+                          min={2}
+                          size="md"
+                          isRequired
+                          controlStyle={{ width: '100%' }}
+                        />
+                      </VStack>
+                      {errors.maxPlayers && (
+                        <FieldStatus type="error" message={errors.maxPlayers} variant="detached" />
+                      )}
                     </VStack>
                   </HStack>
 
                   {/* Skill Requirement using Astryx Selector */}
                   <HStack gap={3} style={{ width: '100%', flexWrap: 'wrap' }}>
                     <VStack gap={1} style={{ flex: 1, minWidth: '200px' }}>
-                      <Text type="supporting" weight="medium">Trình độ tối thiểu *</Text>
+                      <Text type="supporting" weight="medium">
+                        Trình độ tối thiểu <RedAsterisk />
+                      </Text>
                       <Selector
                         label="Trình độ tối thiểu"
                         isLabelHidden={true}
@@ -989,7 +1489,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     </VStack>
 
                     <VStack gap={1} style={{ flex: 1, minWidth: '200px' }}>
-                      <Text type="supporting" weight="medium">Trình độ tối đa *</Text>
+                      <Text type="supporting" weight="medium">
+                        Trình độ tối đa <RedAsterisk />
+                      </Text>
                       <Selector
                         label="Trình độ tối đa"
                         isLabelHidden={true}
@@ -1005,7 +1507,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
                 <Divider variant="subtle" />
 
-                {/* 5. Host Approval Toggle */}
+                {/* 6. Host Approval Toggle */}
                 <VStack gap={2}>
                   <Heading level={3}>Cài đặt tham gia</Heading>
                   <Switch
@@ -1018,44 +1520,67 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
                 <Divider variant="subtle" />
 
-                {/* 6. Title & Description */}
+                {/* 7. Title & Description */}
                 <VStack gap={3}>
                   <Heading level={3}>Thông tin buổi chơi</Heading>
 
                   {/* Tiêu đề buổi chơi */}
                   <VStack gap={1}>
                     <HStack gap={1} style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text type="supporting" weight="medium">Tiêu đề buổi chơi *</Text>
-                    {isTitleManuallyEdited && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        label="Làm mới theo mẫu tự động"
-                        icon={<Sparkles size={13} />}
-                        onClick={() => {
-                          setIsTitleManuallyEdited(false);
-                          setTitle(generateAutoTitle(minSkill, maxSkill, startTime, endTime, startDate));
+                      <Text type="supporting" weight="medium">
+                        Tiêu đề buổi chơi <RedAsterisk />
+                      </Text>
+                      {isTitleManuallyEdited && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          label="Làm mới theo mẫu tự động"
+                          icon={<Sparkles size={13} />}
+                          onClick={() => {
+                            setIsTitleManuallyEdited(false);
+                            setTitle(generateAutoTitle(minSkill, maxSkill, startTime, endTime, startDate));
+                          }}
+                        />
+                      )}
+                    </HStack>
+
+                    <VStack
+                      gap={0}
+                      style={{
+                        borderRadius: 'var(--radius-element)',
+                        border: errors.title ? '1.5px solid var(--color-border-critical, #dc2626)' : '1px solid transparent',
+                        boxShadow: errors.title ? '0 0 0 1px var(--color-border-critical, #dc2626)' : undefined,
+                      }}
+                    >
+                      <TextInput
+                        label="Tiêu đề buổi chơi"
+                        isLabelHidden={true}
+                        value={title}
+                        onChange={(val) => {
+                          setTitle(val);
+                          setIsTitleManuallyEdited(true);
+                          if (errors.title) {
+                            setErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.title;
+                              return next;
+                            });
+                          }
                         }}
+                        placeholder="Ví dụ: Kèo giao lưu Trình TB - TB+ · 19:30 - 21:30 · Thứ Tư (07/10)"
+                        size="md"
+                        isRequired
+                        controlStyle={{ width: '100%' }}
                       />
+                    </VStack>
+                    {errors.title && (
+                      <FieldStatus type="error" message={errors.title} variant="detached" />
                     )}
-                  </HStack>
-                  <TextInput
-                    label="Tiêu đề buổi chơi"
-                    isLabelHidden={true}
-                    value={title}
-                    onChange={(val) => {
-                      setTitle(val);
-                      setIsTitleManuallyEdited(true);
-                    }}
-                    placeholder="Ví dụ: Kèo giao lưu Trình TB - TB+ · 19:30 - 21:30 · Thứ Tư (07/10)"
-                    size="md"
-                    isRequired
-                    controlStyle={{ width: '100%' }}
-                  />
-                  <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
-                    💡 Tiêu đề được định dạng tự động từ trình độ, khung giờ và ngày thi đấu bạn đã chọn. Bạn có thể chỉnh sửa lại tuỳ thích.
-                  </Text>
-                </VStack>
+
+                    <Text type="supporting" color="secondary" style={{ fontSize: '11px' }}>
+                      💡 Tiêu đề được định dạng tự động từ trình độ, khung giờ và ngày thi đấu bạn đã chọn. Bạn có thể chỉnh sửa lại tuỳ thích.
+                    </Text>
+                  </VStack>
 
                   {/* Mô tả & Lưu ý thêm using Astryx TextArea */}
                   <VStack gap={1}>
@@ -1068,10 +1593,10 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                       placeholder="Ghi chú về nước uống, chỗ gửi xe, cách ghép cặp..."
                       controlStyle={{ width: '100%' }}
                     />
+                  </VStack>
                 </VStack>
               </VStack>
-            </VStack>
-          </form>
+            </form>
           </LayoutContent>
         }
         footer={
@@ -1082,11 +1607,18 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             }}
           >
             <HStack gap={2} style={{ justifyContent: 'flex-end', width: '100%' }}>
-              <Button size="md" variant="ghost" label="Hủy bỏ" onClick={onClose} />
+              <Button size="md" variant="ghost" label="Hủy bỏ" onClick={onClose} isDisabled={isSubmitting} />
               <Button
                 size="md"
                 variant="primary"
-                label="Đăng sự kiện"
+                label={
+                  isSubmitting
+                    ? 'Đang đăng sự kiện...'
+                    : isRepeating
+                    ? `Đăng ${repeatCount} sự kiện định kỳ`
+                    : 'Đăng sự kiện'
+                }
+                isDisabled={isSubmitting}
                 onClick={() => {
                   const form = document.getElementById('create-event-form') as HTMLFormElement;
                   if (form) form.requestSubmit();

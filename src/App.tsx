@@ -47,6 +47,8 @@ const MainLayout: React.FC = () => {
     setIsDetailOpen(true);
   };
 
+  const [clonedEvent, setClonedEvent] = useState<Event | null>(null);
+
   const handleOpenReview = (event: Event) => {
     if (!currentUser) {
       setIsAuthOpen(true);
@@ -56,7 +58,7 @@ const MainLayout: React.FC = () => {
     setIsReviewOpen(true);
   };
 
-  const handleOpenCreateEvent = () => {
+  const handleOpenCreateEvent = (eventToClone?: Event) => {
     if (!currentUser) {
       setIsAuthOpen(true);
       return;
@@ -66,6 +68,7 @@ const MainLayout: React.FC = () => {
       alert(t('common.onlyHostCanCreate'));
       return;
     }
+    setClonedEvent(eventToClone || null);
     setIsCreateOpen(true);
   };
 
@@ -121,6 +124,7 @@ const MainLayout: React.FC = () => {
           <MyEventsView
             onSelectEvent={handleSelectEvent}
             onOpenCreateEvent={handleOpenCreateEvent}
+            onCloneEvent={handleOpenCreateEvent}
             onExplore={() => setCurrentTab('explorer')}
             onOpenReview={handleOpenReview}
           />
@@ -145,11 +149,16 @@ const MainLayout: React.FC = () => {
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         onOpenReview={handleOpenReview}
+        onCloneEvent={(ev) => handleOpenCreateEvent(ev)}
       />
 
       <CreateEventModal
         isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
+        onClose={() => {
+          setIsCreateOpen(false);
+          setClonedEvent(null);
+        }}
+        initialEvent={clonedEvent}
       />
 
       <ProfileModal
