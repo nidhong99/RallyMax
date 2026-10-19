@@ -22,20 +22,6 @@ export const SupabaseGuideModal: React.FC<SupabaseGuideModalProps> = ({ isOpen, 
     alert('Đã copy mẫu biến môi trường vào clipboard!');
   };
 
-  const handleCopyMigration = () => {
-    const sql = `-- Chạy câu lệnh này trong Supabase SQL Editor:
-ALTER TABLE public.events 
-  ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS recurrence_frequency VARCHAR(20),
-  ADD COLUMN IF NOT EXISTS recurrence_group_id UUID,
-  ADD COLUMN IF NOT EXISTS recurrence_index SMALLINT,
-  ADD COLUMN IF NOT EXISTS recurrence_count SMALLINT;
-
-CREATE INDEX IF NOT EXISTS idx_events_recurrence_group_id ON public.events(recurrence_group_id);`;
-    navigator.clipboard.writeText(sql);
-    alert('Đã copy lệnh SQL Migration Kèo Định Kỳ vào clipboard!');
-  };
-
   return (
     <Dialog
       isOpen={isOpen}
@@ -132,20 +118,12 @@ CREATE INDEX IF NOT EXISTS idx_events_recurrence_group_id ON public.events(recur
         </VStack>
 
         <HStack gap={2} style={{ justifyContent: 'space-between', paddingTop: 'var(--spacing-2)' }}>
-          <HStack gap={2}>
-            <Button
-              size="md"
-              variant="secondary"
-              label="Copy mẫu .env"
-              onClick={handleCopyEnv}
-            />
-            <Button
-              size="md"
-              variant="secondary"
-              label="Copy SQL Kèo Định Kỳ"
-              onClick={handleCopyMigration}
-            />
-          </HStack>
+          <Button
+            size="md"
+            variant="secondary"
+            label="Copy mẫu .env"
+            onClick={handleCopyEnv}
+          />
           <Button size="md" variant="primary" label="Đã hiểu" onClick={onClose} />
         </HStack>
       </VStack>
