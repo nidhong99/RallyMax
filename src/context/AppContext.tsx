@@ -751,8 +751,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const createEvent = async (eventData: Partial<Event>): Promise<Event> => {
     if (!currentUser) throw new Error('Vui lòng đăng nhập để tạo sự kiện');
-    const isHost = currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com';
-    if (!isHost) throw new Error('Chỉ tài khoản có vai trò Host mới được phép tạo kèo giao lưu');
+    const isHost = isAdmin || currentUser.role === 'HOST' || currentUser.role === 'ADMIN' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com';
+    if (!isHost) throw new Error('Chỉ tài khoản có vai trò Host hoặc Admin mới được phép tạo kèo giao lưu');
 
     const validHostId =
       currentUser.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)

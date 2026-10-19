@@ -65,7 +65,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
   if (!event) return null;
 
-  const isCurrentUserHost = currentUser ? (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com') : false;
+  const isCurrentUserHost = currentUser
+    ? currentUser.role === 'HOST' ||
+      currentUser.role === 'ADMIN' ||
+      (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com'
+    : false;
   const isHost = currentUser
     ? event.host_id === currentUser.id ||
       Boolean(event.host?.email && currentUser.email && event.host.email.toLowerCase() === currentUser.email.toLowerCase()) ||

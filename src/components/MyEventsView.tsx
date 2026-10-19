@@ -31,6 +31,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
 
   const isHost =
     currentUser?.role === 'HOST' ||
+    currentUser?.role === 'ADMIN' ||
     (currentUser?.email || '').toLowerCase() === 'nidhong99@gmail.com';
 
   const [subTab, setSubTab] = useState<'hosting' | 'joining'>(() => (isHost ? 'hosting' : 'joining'));
