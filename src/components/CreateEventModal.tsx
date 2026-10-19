@@ -243,6 +243,31 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [minPlayers, setMinPlayers] = useState('4');
   const [maxPlayers, setMaxPlayers] = useState('8');
 
+  // Real-time validation for slot inputs
+  const validateSlotsRealtime = (minStr: string, maxStr: string) => {
+    const minVal = Number(minStr);
+    const maxVal = Number(maxStr);
+
+    if (maxStr.trim() === '' || isNaN(maxVal) || maxVal < 2) {
+      setErrors((prev) => ({
+        ...prev,
+        maxPlayers: 'Số lượng slot tối đa phải từ 2 người trở lên',
+      }));
+    } else if (!isNaN(minVal) && maxVal < minVal) {
+      setErrors((prev) => ({
+        ...prev,
+        maxPlayers: 'Slot tối đa không được nhỏ hơn slot tối thiểu',
+      }));
+    } else {
+      setErrors((prev) => {
+        if (!prev.maxPlayers) return prev;
+        const next = { ...prev };
+        delete next.maxPlayers;
+        return next;
+      });
+    }
+  };
+
   // 5. Skill
   const [minSkill, setMinSkill] = useState<SkillLevel>('LOW_INTERMEDIATE');
   const [maxSkill, setMaxSkill] = useState<SkillLevel>('HIGH_INTERMEDIATE');
@@ -567,7 +592,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     if (isNaN(maxP) || maxP < 2) {
       newErrors.maxPlayers = 'Số lượng slot tối đa phải từ 2 người trở lên';
     } else if (maxP < minP) {
-      newErrors.maxPlayers = 'Slot tối đa không thể nhỏ hơn slot tối thiểu';
+      newErrors.maxPlayers = 'Slot tối đa không được nhỏ hơn slot tối thiểu';
     }
     if (!title.trim()) {
       newErrors.title = 'Vui lòng nhập tiêu đề sự kiện';
@@ -1426,7 +1451,16 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                         label="Slot tối thiểu"
                         isLabelHidden={true}
                         value={Number(minPlayers) || 4}
-                        onChange={(val) => setMinPlayers(String(val ?? 4))}
+                        onChange={(val) => {
+                          const valStr = String(val ?? 4);
+                          setMinPlayers(valStr);
+                          validateSlotsRealtime(valStr, maxPlayers);
+                        }}
+                        onInput={(e: React.FormEvent<HTMLInputElement>) => {
+                          const valStr = (e.target as HTMLInputElement).value;
+                          setMinPlayers(valStr);
+                          validateSlotsRealtime(valStr, maxPlayers);
+                        }}
                         min={2}
                         size="md"
                         controlStyle={{ width: '100%' }}
@@ -1450,18 +1484,19 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                           isLabelHidden={true}
                           value={Number(maxPlayers) || 8}
                           onChange={(val) => {
-                            setMaxPlayers(String(val ?? 8));
-                            if (errors.maxPlayers) {
-                              setErrors((prev) => {
-                                const next = { ...prev };
-                                delete next.maxPlayers;
-                                return next;
-                              });
-                            }
+                            const valStr = String(val ?? 8);
+                            setMaxPlayers(valStr);
+                            validateSlotsRealtime(minPlayers, valStr);
+                          }}
+                          onInput={(e: React.FormEvent<HTMLInputElement>) => {
+                            const valStr = (e.target as HTMLInputElement).value;
+                            setMaxPlayers(valStr);
+                            validateSlotsRealtime(minPlayers, valStr);
                           }}
                           min={2}
                           size="md"
                           isRequired
+                          status={errors.maxPlayers ? { type: 'error' } : undefined}
                           controlStyle={{ width: '100%' }}
                         />
                       </VStack>
