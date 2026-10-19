@@ -614,7 +614,13 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
           return addDays(startDate, offset);
         });
 
-        for (const dateItem of datesToCreate) {
+        // Shared series group ID for all sessions in this recurring pattern
+        const recurrenceGroupId = typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `rec-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+        for (let i = 0; i < datesToCreate.length; i++) {
+          const dateItem = datesToCreate[i];
           const sIso = `${dateItem}T${startTime}:00+07:00`;
           const eIso = `${dateItem}T${endTime}:00+07:00`;
           const itemTitle = isTitleManuallyEdited
@@ -626,6 +632,11 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             title: itemTitle,
             start_time: sIso,
             end_time: eIso,
+            is_recurring: true,
+            recurrence_frequency: repeatFrequency,
+            recurrence_group_id: recurrenceGroupId,
+            recurrence_index: i + 1,
+            recurrence_count: datesToCreate.length,
           });
         }
       } else {
@@ -636,6 +647,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
           title: title.trim(),
           start_time: startIso,
           end_time: endIso,
+          is_recurring: false,
         });
       }
 

@@ -207,7 +207,19 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                     <TableRow key={ev.id}>
                       <TableCell>
                         <VStack gap={0}>
-                          <Text weight="semibold">{ev.title}</Text>
+                          <HStack gap={1} style={{ alignItems: 'center' }}>
+                            <Text weight="semibold">{ev.title}</Text>
+                            {ev.is_recurring && (
+                              <Badge
+                                variant="teal"
+                                label={
+                                  ev.recurrence_index && ev.recurrence_count
+                                    ? (language === 'vi' ? `Định kỳ ${ev.recurrence_index}/${ev.recurrence_count}` : `Recurring ${ev.recurrence_index}/${ev.recurrence_count}`)
+                                    : (language === 'vi' ? 'Định kỳ' : 'Recurring')
+                                }
+                              />
+                            )}
+                          </HStack>
                           <Text type="supporting" color="secondary">{timeDisplay}</Text>
                         </VStack>
                       </TableCell>
@@ -412,7 +424,19 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                       {/* Title & Time */}
                       <TableCell>
                         <VStack gap={0}>
-                          <Text weight="semibold">{ev.title}</Text>
+                          <HStack gap={1} style={{ alignItems: 'center' }}>
+                            <Text weight="semibold">{ev.title}</Text>
+                            {ev.is_recurring && (
+                              <Badge
+                                variant="teal"
+                                label={
+                                  ev.recurrence_index && ev.recurrence_count
+                                    ? (language === 'vi' ? `Định kỳ ${ev.recurrence_index}/${ev.recurrence_count}` : `Recurring ${ev.recurrence_index}/${ev.recurrence_count}`)
+                                    : (language === 'vi' ? 'Định kỳ' : 'Recurring')
+                                }
+                              />
+                            )}
+                          </HStack>
                           <Text type="supporting" color="secondary">{timeDisplay}</Text>
                         </VStack>
                       </TableCell>

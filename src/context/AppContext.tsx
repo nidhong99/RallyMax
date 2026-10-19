@@ -348,8 +348,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               // Add live events from server (Server is single source of truth for synced events)
               data.forEach((ev: any) => {
                 const matchedV = venues.find(v => v.id === ev.venue_id || v.name === ev.venue_name);
+                const localMatch = prev.find(p => p.id === ev.id);
                 map.set(ev.id, {
                   ...ev,
+                  is_recurring: ev.is_recurring ?? localMatch?.is_recurring ?? false,
+                  recurrence_frequency: ev.recurrence_frequency || localMatch?.recurrence_frequency,
+                  recurrence_group_id: ev.recurrence_group_id || localMatch?.recurrence_group_id,
+                  recurrence_index: ev.recurrence_index ?? localMatch?.recurrence_index,
+                  recurrence_count: ev.recurrence_count ?? localMatch?.recurrence_count,
                   cover_image_url: ev.cover_image_url || ev.venue?.image_url || matchedV?.image_url || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop&q=80',
                   venue: ev.venue || matchedV || {
                     id: ev.venue_id || 'v-default',
@@ -786,6 +792,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       requires_approval: eventData.requires_approval ?? true,
       status: 'OPEN',
       created_at: new Date().toISOString(),
+      is_recurring: eventData.is_recurring ?? false,
+      recurrence_frequency: eventData.recurrence_frequency,
+      recurrence_group_id: eventData.recurrence_group_id,
+      recurrence_index: eventData.recurrence_index,
+      recurrence_count: eventData.recurrence_count,
       cover_image_url:
         eventData.cover_image_url ||
         matchedVenue?.image_url ||
@@ -827,33 +838,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (newEvent.venue_id && newEvent.venue_id.includes('-') && !newEvent.venue_id.startsWith('custom-')) {
           payload.venue_id = newEvent.venue_id;
         }
-        supabase
-          .from('events')
-          .insert([payload])
-          .select('*, host:profiles(*), venue:venues(*)')
-          .single()
-          .then(({ data, error }) => {
-            if (data && !error) {
-              setEvents(prev => {
-                const next = prev.map(e => (e.id === newEvent.id ? {
-                  ...e,
-                  id: data.id,
-                  ...data,
-                  cover_image_url: newEvent.cover_image_url || data.cover_image_url || data.venue?.image_url || matchedVenue?.image_url,
-                  cover_image_position: newEvent.cover_image_position || data.cover_image_position,
-                  venue: data.venue || {
-                    ...fallbackVenue,
-                    image_url: matchedVenue?.image_url || newEvent.cover_image_url,
-                  },
-                  host: currentUser,
-                } : e));
-                localStorage.setItem('rallymax_events', JSON.stringify(next));
-                return next;
-              });
-            } else if (error) {
-              console.warn('Supabase insert event warning:', error.message);
-            }
+        if (newEvent.is_recurring !== undefined) payload.is_recurring = newEvent.is_recurring;
+        if (newEvent.recurrence_frequency) payload.recurrence_frequency = newEvent.recurrence_frequency;
+        if (newEvent.recurrence_group_id) payload.recurrence_group_id = newEvent.recurrence_group_id;
+        if (newEvent.recurrence_index) payload.recurrence_index = newEvent.recurrence_index;
+        if (newEvent.recurrence_count) payload.recurrence_count = newEvent.recurrence_count;
+
+        const syncSuccess = (data: any) => {
+          setEvents(prev => {
+            const next = prev.map(e => (e.id === newEvent.id ? {
+              ...e,
+              id: data.id,
+              ...data,
+              is_recurring: data.is_recurring ?? newEvent.is_recurring,
+              recurrence_frequency: data.recurrence_frequency || newEvent.recurrence_frequency,
+              recurrence_group_id: data.recurrence_group_id || newEvent.recurrence_group_id,
+              recurrence_index: data.recurrence_index ?? newEvent.recurrence_index,
+              recurrence_count: data.recurrence_count ?? newEvent.recurrence_count,
+              cover_image_url: newEvent.cover_image_url || data.cover_image_url || data.venue?.image_url || matchedVenue?.image_url,
+              cover_image_position: newEvent.cover_image_position || data.cover_image_position,
+              venue: data.venue || {
+                ...fallbackVenue,
+                image_url: matchedVenue?.image_url || newEvent.cover_image_url,
+              },
+              host: currentUser,
+            } : e));
+            localStorage.setItem('rallymax_events', JSON.stringify(next));
+            return next;
           });
+        };
+
+        const attemptInsert = (dataPayload: any) => {
+          supabase
+            .from('events')
+            .insert([dataPayload])
+            .select('*, host:profiles(*), venue:venues(*)')
+            .single()
+            .then(({ data, error }) => {
+              if (data && !error) {
+                syncSuccess(data);
+              } else if (error) {
+                // If the remote table has not run the recurring columns migration yet (code 42703), retry without those columns
+                if (error.code === '42703' || error.message?.includes('is_recurring') || error.message?.includes('recurrence_')) {
+                  const fallbackPayload = { ...dataPayload };
+                  delete fallbackPayload.is_recurring;
+                  delete fallbackPayload.recurrence_frequency;
+                  delete fallbackPayload.recurrence_group_id;
+                  delete fallbackPayload.recurrence_index;
+                  delete fallbackPayload.recurrence_count;
+                  supabase
+                    .from('events')
+                    .insert([fallbackPayload])
+                    .select('*, host:profiles(*), venue:venues(*)')
+                    .single()
+                    .then(({ data: fbData, error: fbErr }) => {
+                      if (fbData && !fbErr) {
+                        syncSuccess(fbData);
+                      } else if (fbErr) {
+                        console.warn('Supabase insert fallback warning:', fbErr.message);
+                      }
+                    });
+                } else {
+                  console.warn('Supabase insert event warning:', error.message);
+                }
+              }
+            });
+        };
+
+        attemptInsert(payload);
       } catch (err) {
         console.warn('Supabase createEvent call error:', err);
       }

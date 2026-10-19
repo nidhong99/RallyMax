@@ -11,7 +11,7 @@ import { Table, TableHeader, TableHeaderCell, TableBody, TableRow, TableCell } f
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Event, SKILL_LABELS, PLAY_STYLE_LABELS } from '../types/database';
 import { useApp } from '../context/AppContext';
-import { MapPin, Clock, Users, Shield, DollarSign, AlertTriangle, CheckCircle2, QrCode, ExternalLink, Copy } from 'lucide-react';
+import { MapPin, Clock, Users, Shield, DollarSign, AlertTriangle, CheckCircle2, QrCode, ExternalLink, Copy, Repeat } from 'lucide-react';
 
 const DEFAULT_EVENT_COVER =
   'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1200&auto=format&fit=crop&q=80';
@@ -22,6 +22,7 @@ interface EventDetailModalProps {
   onClose: () => void;
   onOpenReview?: (event: Event) => void;
   onCloneEvent?: (event: Event) => void;
+  onSelectEvent?: (event: Event) => void;
 }
 
 export const EventDetailModal: React.FC<EventDetailModalProps> = ({
@@ -29,8 +30,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   isOpen,
   onClose,
   onCloneEvent,
+  onSelectEvent,
 }) => {
   const {
+    events,
     currentUser,
     registerForEvent,
     cancelRegistration,
@@ -40,6 +43,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
     cancelEvent,
     deleteEvent,
   } = useApp();
+
+  const siblingEvents = event?.recurrence_group_id
+    ? events
+        .filter((e) => e.recurrence_group_id === event.recurrence_group_id)
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    : [];
 
   const [step, setStep] = useState<'details' | 'confirm'>('details');
   const [guestCount] = useState<number>(0);
@@ -217,6 +226,17 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                           variant={minSkill.badgeVariant}
                           label={`${minSkill.label.split(' ')[0]}${minSkill.label !== maxSkill.label ? ` → ${maxSkill.label.split(' ')[0]}` : ''}`}
                         />
+                        {event.is_recurring && (
+                          <Badge
+                            variant="teal"
+                            icon={<Repeat size={12} />}
+                            label={
+                              event.recurrence_index && event.recurrence_count
+                                ? `${event.recurrence_frequency === 'DAILY' ? 'Định kỳ hàng ngày' : 'Định kỳ hàng tuần'} (${event.recurrence_index}/${event.recurrence_count})`
+                                : (event.recurrence_frequency === 'DAILY' ? 'Định kỳ hàng ngày' : 'Định kỳ hàng tuần')
+                            }
+                          />
+                        )}
                       </HStack>
                       <Badge variant={isFull ? 'red' : 'green'} label={`Đã tham gia: ${totalSlotsTaken}/${event.max_players} người`} />
                     </HStack>
@@ -258,6 +278,69 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                     />
                   )}
                 </HStack>
+
+                {/* Recurring series list */}
+                {event.is_recurring && siblingEvents.length > 1 && (
+                  <VStack
+                    gap={2}
+                    style={{
+                      padding: 'var(--spacing-3)',
+                      background: 'var(--color-background-muted)',
+                      borderRadius: 'var(--radius-container)',
+                      border: '1px solid var(--color-border)',
+                    }}
+                  >
+                    <HStack gap={1} style={{ alignItems: 'center' }}>
+                      <Repeat size={15} color="var(--color-icon-accent)" />
+                      <Heading level={4}>
+                        Chuỗi kèo định kỳ ({siblingEvents.length} buổi)
+                      </Heading>
+                    </HStack>
+                    <VStack gap={1}>
+                      {siblingEvents.map((sibling, idx) => {
+                        const sDate = new Date(sibling.start_time);
+                        const sTimeDisplay = `${sDate.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })} • ${sDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+                        const isCurrent = sibling.id === event.id;
+                        return (
+                          <HStack
+                            key={sibling.id}
+                            gap={2}
+                            style={{
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: 'var(--spacing-2) var(--spacing-3)',
+                              background: isCurrent ? 'var(--color-background-surface)' : 'transparent',
+                              borderRadius: 'var(--radius-element)',
+                              border: isCurrent ? '1px solid var(--color-border-accent, var(--color-border))' : '1px solid transparent',
+                            }}
+                          >
+                            <HStack gap={2} style={{ alignItems: 'center' }}>
+                              <Badge
+                                variant={isCurrent ? 'teal' : 'neutral'}
+                                label={`Buổi ${sibling.recurrence_index || idx + 1}/${sibling.recurrence_count || siblingEvents.length}`}
+                              />
+                              <Text weight={isCurrent ? 'semibold' : 'regular'} style={{ fontSize: '13px' }}>
+                                {sTimeDisplay}
+                              </Text>
+                            </HStack>
+                            {isCurrent ? (
+                              <Badge variant="blue" label="Đang xem" />
+                            ) : (
+                              onSelectEvent && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  label="Xem buổi này"
+                                  onClick={() => onSelectEvent(sibling)}
+                                />
+                              )
+                            )}
+                          </HStack>
+                        );
+                      })}
+                    </VStack>
+                  </VStack>
+                )}
 
                 <HStack
                   gap={2}

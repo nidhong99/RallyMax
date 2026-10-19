@@ -9,7 +9,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { Event, SKILL_LABELS } from '../types/database';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
-import { MapPin, Clock, Shield } from 'lucide-react';
+import { MapPin, Clock, Shield, Repeat } from 'lucide-react';
 
 const DEFAULT_EVENT_COVER =
   'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop&q=80';
@@ -131,7 +131,20 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
             </HStack>
           </HStack>
 
-          <HStack gap={1} style={{ justifyContent: 'flex-end', alignItems: 'center', width: '100%' }}>
+          <HStack gap={1} style={{ justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            {event.is_recurring ? (
+              <Badge
+                variant="teal"
+                icon={<Repeat size={12} />}
+                label={
+                  event.recurrence_index && event.recurrence_count
+                    ? `${event.recurrence_frequency === 'DAILY' ? t('card.recurringDaily') : t('card.recurringWeekly')} (${event.recurrence_index}/${event.recurrence_count})`
+                    : (event.recurrence_frequency === 'DAILY' ? t('card.recurringDaily') : t('card.recurringWeekly'))
+                }
+              />
+            ) : (
+              <span />
+            )}
             <Badge
               variant={isFull ? 'red' : 'green'}
               label={t('card.slots', { count: totalApprovedPlayers, max: event.max_players })}

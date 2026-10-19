@@ -150,6 +150,7 @@ const MainLayout: React.FC = () => {
         onClose={() => setIsDetailOpen(false)}
         onOpenReview={handleOpenReview}
         onCloneEvent={(ev) => handleOpenCreateEvent(ev)}
+        onSelectEvent={handleSelectEvent}
       />
 
       <CreateEventModal

@@ -119,6 +119,13 @@ export interface Event {
   created_at: string;
   updated_at?: string;
   
+  // Recurring event fields
+  is_recurring?: boolean;
+  recurrence_frequency?: 'WEEKLY' | 'DAILY' | string;
+  recurrence_group_id?: string;
+  recurrence_index?: number;
+  recurrence_count?: number;
+
   // Joined fields
   venue?: Venue;
   host?: Profile;

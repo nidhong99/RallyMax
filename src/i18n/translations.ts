@@ -69,8 +69,10 @@ export interface Translations {
     fee: string;
     manage: string;
     viewApplication: string;
-    join: string;
     court: string;
+    recurringWeekly: string;
+    recurringDaily: string;
+    recurringBadge: string;
   };
   myEvents: {
     title: string;
@@ -170,8 +172,10 @@ export const translations: Record<Language, Translations> = {
       fee: 'Phí tham gia',
       manage: 'Quản lý kèo',
       viewApplication: 'Xem đơn',
-      join: 'Tham gia',
       court: 'Sân',
+      recurringWeekly: 'Định kỳ hàng tuần',
+      recurringDaily: 'Định kỳ hàng ngày',
+      recurringBadge: 'Kèo định kỳ',
     },
     myEvents: {
       title: 'Kèo của tôi',
@@ -276,8 +280,10 @@ export const translations: Record<Language, Translations> = {
       fee: 'Fee',
       manage: 'Manage',
       viewApplication: 'View Status',
-      join: 'Join Game',
       court: 'Court',
+      recurringWeekly: 'Weekly recurring',
+      recurringDaily: 'Daily recurring',
+      recurringBadge: 'Recurring series',
     },
     myEvents: {
       title: 'My Sessions',

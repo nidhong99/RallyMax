@@ -202,9 +202,28 @@ CREATE TABLE IF NOT EXISTS public.events (
     ),
     cancellation_reason TEXT,
     
+    -- Kèo định kỳ / Lặp lại
+    is_recurring BOOLEAN DEFAULT FALSE,
+    recurrence_frequency VARCHAR(20),
+    recurrence_group_id UUID,
+    recurrence_index SMALLINT,
+    recurrence_count SMALLINT,
+    
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Index hỗ trợ tìm kiếm nhanh chuỗi sự kiện định kỳ
+CREATE INDEX IF NOT EXISTS idx_events_recurrence_group_id ON public.events(recurrence_group_id);
+
+-- DÀNH CHO DATABASE ĐÃ CHẠY TỪ TRƯỚC (CHẠY LỆNH NÀY TRONG SQL EDITOR ĐỂ CẬP NHẬT):
+-- ALTER TABLE public.events 
+--   ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE,
+--   ADD COLUMN IF NOT EXISTS recurrence_frequency VARCHAR(20),
+--   ADD COLUMN IF NOT EXISTS recurrence_group_id UUID,
+--   ADD COLUMN IF NOT EXISTS recurrence_index SMALLINT,
+--   ADD COLUMN IF NOT EXISTS recurrence_count SMALLINT;
+-- CREATE INDEX IF NOT EXISTS idx_events_recurrence_group_id ON public.events(recurrence_group_id);
 
 -- 6. Bảng Event Registrations (Đăng ký tham gia sự kiện)
 CREATE TABLE IF NOT EXISTS public.event_registrations (
