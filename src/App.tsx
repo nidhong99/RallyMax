@@ -63,7 +63,7 @@ const MainLayout: React.FC = () => {
       setIsAuthOpen(true);
       return;
     }
-    const isHost = isAdmin || currentUser.role === 'HOST' || currentUser.role === 'ADMIN';
+    const isHost = (isAdmin || currentUser.role === 'HOST' || currentUser.role === 'ADMIN') && currentUser.role !== 'PLAYER';
     if (!isHost) {
       alert(t('common.onlyHostCanCreate'));
       return;

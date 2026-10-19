@@ -66,8 +66,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   if (!event) return null;
 
   const isCurrentUserHost = currentUser
-    ? currentUser.role === 'HOST' ||
-      currentUser.role === 'ADMIN'
+    ? (currentUser.role === 'HOST' || currentUser.role === 'ADMIN') &&
+      currentUser.role !== 'PLAYER'
     : false;
   const isHost = currentUser
     ? event.host_id === currentUser.id ||
@@ -730,7 +730,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                   <VStack gap={2} style={{ width: '100%' }}>
                     {!isCancelling ? (
                       <HStack gap={2} style={{ justifyContent: 'flex-end', width: '100%', flexWrap: 'wrap' }}>
-                        {onCloneEvent && (
+                        {onCloneEvent && isCurrentUserHost && (
                           <Button
                             variant="secondary"
                             size="sm"

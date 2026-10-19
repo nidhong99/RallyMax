@@ -470,11 +470,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const login = (user: Profile) => {
+    const email = (user.email || '').toLowerCase();
     const finalRole: 'ADMIN' | 'HOST' | 'PLAYER' =
       (user.role === 'ADMIN' || user.role === 'HOST' || user.role === 'PLAYER')
         ? user.role
         : 'PLAYER';
-    const isHost = finalRole === 'HOST' || finalRole === 'ADMIN';
+    const isHost = (finalRole === 'HOST' || finalRole === 'ADMIN') && finalRole !== 'PLAYER';
     const profileToStore: Profile = {
       ...user,
       role: finalRole,
@@ -753,7 +754,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const createEvent = async (eventData: Partial<Event>): Promise<Event> => {
     if (!currentUser) throw new Error('Vui lòng đăng nhập để tạo sự kiện');
-    const isHost = isAdmin || currentUser.role === 'HOST' || currentUser.role === 'ADMIN';
+    const isHost = (isAdmin || currentUser.role === 'HOST' || currentUser.role === 'ADMIN') && currentUser.role !== 'PLAYER';
     if (!isHost) throw new Error('Chỉ tài khoản có vai trò Host hoặc Admin mới được phép tạo kèo giao lưu');
 
     const validHostId =

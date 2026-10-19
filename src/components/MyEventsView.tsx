@@ -30,8 +30,8 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
   const { t, language, formatCurrency } = useLanguage();
 
   const isHost =
-    currentUser?.role === 'HOST' ||
-    currentUser?.role === 'ADMIN';
+    (currentUser?.role === 'HOST' || currentUser?.role === 'ADMIN') &&
+    currentUser?.role !== 'PLAYER';
 
   const [subTab, setSubTab] = useState<'hosting' | 'joining'>(() => (isHost ? 'hosting' : 'joining'));
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'CHECKED_IN' | 'CANCELLED'>('ALL');
@@ -266,7 +266,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
                             label={language === 'vi' ? 'Quản lý' : 'Manage'}
                             onClick={() => onSelectEvent(ev)}
                           />
-                          {onCloneEvent && (
+                          {onCloneEvent && isHost && (
                             <Button
                               size="sm"
                               variant="ghost"

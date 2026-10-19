@@ -28,7 +28,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 }) => {
   const { currentUser, isLoggedIn, logout, isAdmin } = useApp();
   const { language, setLanguage, t } = useLanguage();
-  const isHost = isAdmin || currentUser?.role === 'HOST' || currentUser?.role === 'ADMIN';
+  const isHost = (isAdmin || currentUser?.role === 'HOST' || currentUser?.role === 'ADMIN') && currentUser?.role !== 'PLAYER';
 
   return (
     <TopNav

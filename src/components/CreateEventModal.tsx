@@ -115,6 +115,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   initialEvent,
 }) => {
   const { createEvent, venues, events, currentUser, isAdmin } = useApp();
+  const isHost =
+    (isAdmin || currentUser?.role === 'HOST' || currentUser?.role === 'ADMIN') &&
+    currentUser?.role !== 'PLAYER';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isSelectingFileRef = useRef(false);
   const resetSelectingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -551,6 +554,10 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isHost) {
+      alert('Chỉ tài khoản có vai trò Host hoặc Admin mới có quyền tạo kèo giao lưu.');
+      return;
+    }
     const newErrors: Record<string, string> = {};
 
     if (!selectedVenueId && !venueName.trim()) {
@@ -658,6 +665,74 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       setIsSubmitting(false);
     }
   };
+
+  if (!isHost) {
+    return (
+      <Dialog
+        isOpen={isOpen}
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
+        purpose="alert"
+        width={560}
+      >
+        <Layout
+          height="auto"
+          header={
+            <DialogHeader
+              title="Tổ chức Kèo Cầu Lông"
+              subtitle="Yêu cầu vai trò Host hoặc Quản trị viên"
+              hasDivider={true}
+              onOpenChange={(open) => {
+                if (!open) onClose();
+              }}
+            />
+          }
+          content={
+            <LayoutContent
+              padding={4}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-4)',
+              }}
+            >
+              <VStack
+                gap={4}
+                style={{
+                  padding: 'var(--spacing-6) var(--spacing-2)',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                }}
+              >
+                <Banner
+                  status="warning"
+                  title="Tài khoản chưa có quyền tổ chức kèo giao lưu"
+                  description="Tài khoản của bạn hiện có vai trò Người chơi (Player). Để đảm bảo tính cam kết sân bãi và điểm danh uy tín, chỉ tài khoản có vai trò Host hoặc Quản trị viên (Admin) mới có quyền tạo và tổ chức kèo giao lưu trên hệ thống RallyMax."
+                  collapsible={false}
+                />
+                <Text color="secondary" style={{ maxWidth: '440px' }}>
+                  Nếu bạn là người thường xuyên đại diện đặt sân cho nhóm cầu lông, vui lòng liên hệ Ban quản trị để được nâng cấp lên vai trò Host.
+                </Text>
+              </VStack>
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter
+              hasDivider={true}
+              style={{
+                background: 'var(--color-background-surface)',
+              }}
+            >
+              <HStack gap={2} style={{ justifyContent: 'flex-end', width: '100%' }}>
+                <Button size="md" variant="secondary" label="Đóng" onClick={onClose} />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog
