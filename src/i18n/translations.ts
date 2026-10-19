@@ -132,7 +132,7 @@ export const translations: Record<Language, Translations> = {
       title: 'Đăng nhập',
       subtitle: 'Kết nối sân cầu lông & cộng đồng đam mê thể thao',
       emailSection: 'Đăng nhập bằng Email',
-      emailPlaceholder: 'Nhập email của bạn (vd: nidhong99@gmail.com)...',
+      emailPlaceholder: 'Nhập email của bạn (vd: athlete@rallymax.vn)...',
       emailContinue: 'Tiếp tục với Email',
       processing: 'Đang xử lý...',
       orContinueWith: 'hoặc tiếp tục với',

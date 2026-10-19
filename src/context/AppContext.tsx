@@ -117,7 +117,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const u = JSON.parse(saved);
-        if (u && (u.role === 'ADMIN' || (u.email || '').toLowerCase() === 'nidhong99@gmail.com')) {
+        if (u && u.role === 'ADMIN') {
           return 'admin';
         }
         if (u && u.role === 'HOST') {
@@ -128,7 +128,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return 'player';
   });
 
-  const isAdmin = currentUser?.role === 'ADMIN' || (currentUser?.email || '').toLowerCase() === 'nidhong99@gmail.com';
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   const [venues, setVenues] = useState<Venue[]>(() => {
     const saved = localStorage.getItem('rallymax_venues');
@@ -196,8 +196,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const userMeta = payload.user_metadata || {};
             const fullName = userMeta.full_name || userMeta.name || (userEmail ? userEmail.split('@')[0] : 'Vận động viên');
             const avatarUrl = userMeta.avatar_url || userMeta.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+            const initialRole: 'ADMIN' | 'HOST' | 'PLAYER' =
+              (userMeta.role === 'ADMIN' || userMeta.role === 'HOST') ? userMeta.role : 'PLAYER';
 
-            const isHostEmail = userEmail === 'nidhong99@gmail.com';
             const userFromHash: Profile = {
               id: payload.sub || 'user-' + Date.now(),
               email: userEmail,
@@ -205,8 +206,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               avatar_url: avatarUrl,
               phone_number: userMeta.phone || '',
               gender: 'OTHER',
-              role: isHostEmail ? 'HOST' : (userMeta.role || 'PLAYER'),
-              is_verified_host: isHostEmail,
+              role: initialRole,
+              is_verified_host: Boolean(userMeta.is_verified_host || initialRole === 'HOST' || initialRole === 'ADMIN'),
               skill_level: 'BEGINNER',
               dominant_hand: 'RIGHT',
               play_style: 'ALL_ROUND',
@@ -244,7 +245,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const roleFromDb: 'PLAYER' | 'HOST' | 'ADMIN' =
                 (p.role === 'ADMIN' || p.role === 'HOST' || p.role === 'PLAYER')
                   ? p.role
-                  : ((p.email || '').toLowerCase() === 'nidhong99@gmail.com' ? 'ADMIN' : 'PLAYER');
+                  : 'PLAYER';
               return {
                 id: p.id,
                 email: p.email || '',
@@ -276,7 +277,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const roleFromDb: 'PLAYER' | 'HOST' | 'ADMIN' =
               (freshData.role === 'ADMIN' || freshData.role === 'HOST' || freshData.role === 'PLAYER')
                 ? freshData.role
-                : ((freshData.email || '').toLowerCase() === 'nidhong99@gmail.com' ? 'ADMIN' : 'PLAYER');
+                : 'PLAYER';
             const updated: Profile = {
               ...current,
               role: roleFromDb,
@@ -437,7 +438,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (existing) {
       login(existing);
     } else {
-      const isHostEmail = (user.email || '').toLowerCase() === 'nidhong99@gmail.com';
+      const initialRole: 'ADMIN' | 'HOST' | 'PLAYER' =
+        (user.user_metadata?.role === 'ADMIN' || user.user_metadata?.role === 'HOST')
+          ? user.user_metadata.role
+          : 'PLAYER';
       const newProfile: Profile = {
         id: user.id,
         email: user.email || '',
@@ -445,8 +449,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
         phone_number: user.user_metadata?.phone || '',
         gender: 'OTHER',
-        role: isHostEmail ? 'HOST' : (user.user_metadata?.role || 'PLAYER'),
-        is_verified_host: isHostEmail,
+        role: initialRole,
+        is_verified_host: Boolean(user.user_metadata?.is_verified_host || initialRole === 'HOST' || initialRole === 'ADMIN'),
         skill_level: 'BEGINNER',
         dominant_hand: 'RIGHT',
         play_style: 'ALL_ROUND',
@@ -466,20 +470,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const login = (user: Profile) => {
-    const email = (user.email || '').toLowerCase();
-    const isOwner = email === 'nidhong99@gmail.com';
-    const isDbAdmin = user.role === 'ADMIN';
-    const isAdminUser = isOwner || isDbAdmin;
-    const isHost = isAdminUser || (user.role === 'HOST' && email !== '75dangtheanh@gmail.com') || user.id === 'user-host-1';
-    const finalRole: 'ADMIN' | 'HOST' | 'PLAYER' = isAdminUser ? 'ADMIN' : (isHost ? 'HOST' : 'PLAYER');
+    const finalRole: 'ADMIN' | 'HOST' | 'PLAYER' =
+      (user.role === 'ADMIN' || user.role === 'HOST' || user.role === 'PLAYER')
+        ? user.role
+        : 'PLAYER';
+    const isHost = finalRole === 'HOST' || finalRole === 'ADMIN';
     const profileToStore: Profile = {
       ...user,
       role: finalRole,
-      is_verified_host: isHost,
+      is_verified_host: Boolean(user.is_verified_host || isHost),
     };
 
     setCurrentUser(profileToStore);
-    setActiveRole(isAdminUser ? 'admin' : (isHost ? 'host' : 'player'));
+    setActiveRole(finalRole === 'ADMIN' ? 'admin' : (finalRole === 'HOST' ? 'host' : 'player'));
     localStorage.setItem('rallymax_current_user_id', profileToStore.id);
     localStorage.setItem('rallymax_current_user', JSON.stringify(profileToStore));
 
@@ -568,7 +571,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const effectiveRole: 'PLAYER' | 'HOST' | 'ADMIN' =
             (data.role === 'ADMIN' || data.role === 'HOST' || data.role === 'PLAYER')
               ? data.role
-              : (cleanEmail === 'nidhong99@gmail.com' ? 'ADMIN' : 'PLAYER');
+              : 'PLAYER';
           const profile: Profile = {
             id: data.id,
             email: data.email,
@@ -604,7 +607,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 4. Create new profile with this email
     const finalName = name?.trim() || cleanEmail.split('@')[0];
-    const isHost = cleanEmail === 'nidhong99@gmail.com';
     const newProfile: Profile = {
       id: generateUuid(),
       email: cleanEmail,
@@ -612,8 +614,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       phone_number: '',
       gender: 'OTHER',
-      role: isHost ? 'HOST' : 'PLAYER',
-      is_verified_host: isHost,
+      role: 'PLAYER',
+      is_verified_host: false,
       skill_level: 'BEGINNER',
       dominant_hand: 'RIGHT',
       play_style: 'ALL_ROUND',
@@ -751,13 +753,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const createEvent = async (eventData: Partial<Event>): Promise<Event> => {
     if (!currentUser) throw new Error('Vui lòng đăng nhập để tạo sự kiện');
-    const isHost = isAdmin || currentUser.role === 'HOST' || currentUser.role === 'ADMIN' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com';
+    const isHost = isAdmin || currentUser.role === 'HOST' || currentUser.role === 'ADMIN';
     if (!isHost) throw new Error('Chỉ tài khoản có vai trò Host hoặc Admin mới được phép tạo kèo giao lưu');
 
     const validHostId =
       currentUser.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)
         ? currentUser.id
-        : ((currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com' ? 'f4e7c76e-217a-46ed-8de8-daf349bbb020' : generateUuid());
+        : generateUuid();
 
     const eventId = generateUuid();
     const matchedVenue = venues.find(v => v.id === eventData.venue_id || v.name === eventData.venue_name);
@@ -1334,7 +1336,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const roleFromDb: 'PLAYER' | 'HOST' | 'ADMIN' =
               (p.role === 'ADMIN' || p.role === 'HOST' || p.role === 'PLAYER')
                 ? p.role
-                : ((p.email || '').toLowerCase() === 'nidhong99@gmail.com' ? 'ADMIN' : 'PLAYER');
+                : 'PLAYER';
             return {
               id: p.id,
               email: p.email || '',
@@ -1364,7 +1366,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const roleFromDb: 'PLAYER' | 'HOST' | 'ADMIN' =
               (freshData.role === 'ADMIN' || freshData.role === 'HOST' || freshData.role === 'PLAYER')
                 ? freshData.role
-                : ((freshData.email || '').toLowerCase() === 'nidhong99@gmail.com' ? 'ADMIN' : 'PLAYER');
+                : 'PLAYER';
             const updated: Profile = {
               ...current,
               role: roleFromDb,

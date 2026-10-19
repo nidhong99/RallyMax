@@ -28,7 +28,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 }) => {
   const { currentUser, isLoggedIn, logout, isAdmin } = useApp();
   const { language, setLanguage, t } = useLanguage();
-  const isHost = isAdmin || currentUser?.role === 'HOST' || (currentUser?.email || '').toLowerCase() === 'nidhong99@gmail.com';
+  const isHost = isAdmin || currentUser?.role === 'HOST' || currentUser?.role === 'ADMIN';
 
   return (
     <TopNav
@@ -137,16 +137,16 @@ export const Navigation: React.FC<NavigationProps> = ({
                     </Text>
                     <Badge
                       variant={
-                        isAdmin
+                        isAdmin || currentUser.role === 'ADMIN'
                           ? 'purple'
-                          : (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
+                          : currentUser.role === 'HOST'
                           ? 'purple'
                           : 'blue'
                       }
                       label={
-                        isAdmin
+                        isAdmin || currentUser.role === 'ADMIN'
                           ? t('nav.roleAdminBadge')
-                          : (currentUser.role === 'HOST' || (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com')
+                          : currentUser.role === 'HOST'
                           ? t('nav.roleHostBadge')
                           : t('nav.rolePlayerBadge')
                       }

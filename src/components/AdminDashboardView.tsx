@@ -120,7 +120,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           <Lock size={48} color="var(--color-destructive)" />
           <Heading level={2}>Không có quyền truy cập</Heading>
           <Text color="secondary">
-            Bạn cần tài khoản có vai trò <b>ADMIN</b> (ví dụ: nidhong99@gmail.com) để truy cập Bảng Quản Trị Hệ Thống.
+            Bạn cần tài khoản có vai trò <b>ADMIN</b> để truy cập Bảng Quản Trị Hệ Thống.
           </Text>
         </VStack>
       </Card>
@@ -130,7 +130,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   // KPI Calculations
   const totalVenuesCount = venues.length;
   const totalUsersCount = allUsers.length;
-  const adminCount = allUsers.filter(u => u.role === 'ADMIN' || (u.email || '').toLowerCase() === 'nidhong99@gmail.com').length;
+  const adminCount = allUsers.filter(u => u.role === 'ADMIN').length;
   const hostCount = allUsers.filter(u => u.role === 'HOST').length;
   const playerCount = allUsers.filter(u => u.role === 'PLAYER').length;
   const totalEventsCount = events.length;
@@ -284,7 +284,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       (u.email || '').toLowerCase().includes(userSearch.toLowerCase());
     if (!matchesQuery) return false;
     if (userRoleFilter === 'ALL') return true;
-    if (userRoleFilter === 'ADMIN') return u.role === 'ADMIN' || (u.email || '').toLowerCase() === 'nidhong99@gmail.com';
+    if (userRoleFilter === 'ADMIN') return u.role === 'ADMIN';
     return u.role === userRoleFilter;
   });
 
@@ -766,8 +766,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </thead>
               <tbody>
                 {paginatedUsers.map((u) => {
-                  const isCurrentAdmin = (u.email || '').toLowerCase() === 'nidhong99@gmail.com';
-                  const displayRole: UserRole = u.role || (isCurrentAdmin ? 'ADMIN' : 'PLAYER');
+                  const displayRole: UserRole = u.role || 'PLAYER';
                   const score = u.reliability_score ?? 100;
                   const isLowScore = score < 90;
 

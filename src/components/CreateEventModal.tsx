@@ -175,7 +175,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const availableEventsToClone = useMemo(() => {
     if (!events || events.length === 0) return [];
     const hostEvents = events.filter(
-      (e) => e.host_id === currentUser?.id || e.host?.id === currentUser?.id || (currentUser?.email || '').toLowerCase() === 'nidhong99@gmail.com'
+      (e) => e.host_id === currentUser?.id || e.host?.id === currentUser?.id || currentUser?.role === 'ADMIN'
     );
     if (hostEvents.length > 0) return hostEvents;
     return events.slice(0, 10);

@@ -35,8 +35,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
   const isFull = totalApprovedPlayers >= event.max_players;
   const isCurrentUserHost = currentUser
     ? currentUser.role === 'HOST' ||
-      currentUser.role === 'ADMIN' ||
-      (currentUser.email || '').toLowerCase() === 'nidhong99@gmail.com'
+      currentUser.role === 'ADMIN'
     : false;
   const isHost = currentUser
     ? event.host_id === currentUser.id ||
