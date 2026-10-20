@@ -42,8 +42,15 @@ This project follows human-readable changelog guidelines based on [Keep a Change
     - Applied Player: `"Xem đơn"` / `"View Application"`
     - New Player: `"Tham gia"` / `"Join"`
 
+### 📖 Documentation & Developer Onboarding
+- **Unified Developer Onboarding Guide ([README.md](README.md))**:
+  - Consolidated `SUPABASE_SETUP_GUIDE.md` and `ROLE_BASED_ACCESS_CONTROL_GUIDE.md` into a single, comprehensive onboarding guide at the repository root.
+  - Includes 5-minute quickstart, complete BCNF database schema with recurring events and role-based columns, OAuth configurations, RLS security policies, and permission matrix.
+
 ---
 
 ## Reference Guides
+- [README.md](README.md): Master onboarding guide, quickstart, and unified setup documentation.
 - [ROLE_BASED_ACCESS_CONTROL_GUIDE.md](ROLE_BASED_ACCESS_CONTROL_GUIDE.md): Architectural guide on roles, permissions matrix, and Supabase RLS policies.
 - [SUPABASE_SETUP_GUIDE.md](SUPABASE_SETUP_GUIDE.md): Setup instructions, environment variables, and migration instructions.
+
