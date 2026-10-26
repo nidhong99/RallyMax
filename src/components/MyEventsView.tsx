@@ -30,8 +30,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
   const { t, language, formatCurrency } = useLanguage();
 
   const isHost =
-    (currentUser?.role === 'HOST' || currentUser?.role === 'ADMIN') &&
-    currentUser?.role !== 'PLAYER';
+    currentUser?.role === 'HOST' || currentUser?.role === 'ADMIN';
 
   const [subTab, setSubTab] = useState<'hosting' | 'joining'>(() => (isHost ? 'hosting' : 'joining'));
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'CHECKED_IN' | 'CANCELLED'>('ALL');

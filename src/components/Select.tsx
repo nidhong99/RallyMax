@@ -120,7 +120,6 @@ export const Select = React.forwardRef<any, SelectProps>((props, ref) => {
       className={className}
     >
       <Selector
-        ref={ref}
         label={resolvedLabel}
         isLabelHidden={isLabelHidden}
         options={resolvedOptions}

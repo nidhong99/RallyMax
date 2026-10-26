@@ -22,8 +22,7 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
   const { events, currentUser } = useApp();
   const { t } = useLanguage();
   const isHost =
-    (currentUser?.role === 'HOST' || currentUser?.role === 'ADMIN') &&
-    currentUser?.role !== 'PLAYER';
+    currentUser?.role === 'HOST' || currentUser?.role === 'ADMIN';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [districtFilter, setDistrictFilter] = useState('ALL');

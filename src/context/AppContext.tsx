@@ -475,7 +475,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       (user.role === 'ADMIN' || user.role === 'HOST' || user.role === 'PLAYER')
         ? user.role
         : 'PLAYER';
-    const isHost = (finalRole === 'HOST' || finalRole === 'ADMIN') && finalRole !== 'PLAYER';
+    const isHost = finalRole === 'HOST' || finalRole === 'ADMIN';
     const profileToStore: Profile = {
       ...user,
       role: finalRole,

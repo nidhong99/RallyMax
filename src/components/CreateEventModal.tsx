@@ -698,7 +698,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         onOpenChange={(open) => {
           if (!open) onClose();
         }}
-        purpose="alert"
+        purpose="info"
         width={560}
       >
         <Layout
@@ -981,7 +981,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                         value={venueName}
                         placeholder="Tên sân tự động cập nhật khi chọn sân"
                         size="md"
-                        controlStyle={{ width: '100%' }}
                       />
                       {currentVenue?.address && (
                         <Text type="supporting" color="secondary" style={{ fontSize: '11px', marginTop: '2px' }}>
@@ -999,7 +998,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                         onChange={(val) => setCourtNumbers(val)}
                         placeholder="Sân 1, Sân 2"
                         size="md"
-                        controlStyle={{ width: '100%' }}
                       />
                     </VStack>
                   </HStack>
@@ -1543,11 +1541,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                           setMinPlayers(valStr);
                           validateSlotsRealtime(valStr, maxPlayers);
                         }}
-                        onInput={(e: React.FormEvent<HTMLInputElement>) => {
-                          const valStr = (e.target as HTMLInputElement).value;
-                          setMinPlayers(valStr);
-                          validateSlotsRealtime(valStr, maxPlayers);
-                        }}
                         min={2}
                         size="md"
                         controlStyle={{ width: '100%' }}
@@ -1572,11 +1565,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                           value={Number(maxPlayers) || 8}
                           onChange={(val) => {
                             const valStr = String(val ?? 8);
-                            setMaxPlayers(valStr);
-                            validateSlotsRealtime(minPlayers, valStr);
-                          }}
-                          onInput={(e: React.FormEvent<HTMLInputElement>) => {
-                            const valStr = (e.target as HTMLInputElement).value;
                             setMaxPlayers(valStr);
                             validateSlotsRealtime(minPlayers, valStr);
                           }}
@@ -1692,7 +1680,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                         placeholder="Ví dụ: Kèo giao lưu Trình TB - TB+ · 19:30 - 21:30 · Thứ Tư (07/10)"
                         size="md"
                         isRequired
-                        controlStyle={{ width: '100%' }}
                       />
                     </VStack>
                     {errors.title && (
@@ -1713,7 +1700,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                       value={description}
                       onChange={(val) => setDescription(val)}
                       placeholder="Ghi chú về nước uống, chỗ gửi xe, cách ghép cặp..."
-                      controlStyle={{ width: '100%' }}
                     />
                   </VStack>
                 </VStack>

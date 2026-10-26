@@ -66,8 +66,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   if (!event) return null;
 
   const isCurrentUserHost = currentUser
-    ? (currentUser.role === 'HOST' || currentUser.role === 'ADMIN') &&
-      currentUser.role !== 'PLAYER'
+    ? currentUser.role === 'HOST' || currentUser.role === 'ADMIN'
     : false;
   const isHost = currentUser
     ? event.host_id === currentUser.id ||
@@ -322,7 +321,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                                 variant={isCurrent ? 'teal' : 'neutral'}
                                 label={`Buổi ${sibling.recurrence_index || idx + 1}/${sibling.recurrence_count || siblingEvents.length}`}
                               />
-                              <Text weight={isCurrent ? 'semibold' : 'regular'} style={{ fontSize: '13px' }}>
+                              <Text weight={isCurrent ? 'semibold' : 'normal'} style={{ fontSize: '13px' }}>
                                 {sTimeDisplay}
                               </Text>
                             </HStack>

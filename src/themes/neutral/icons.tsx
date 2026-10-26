@@ -48,7 +48,7 @@ const iconProps = {
   'aria-hidden': true as const,
 };
 
-export const neutralIconRegistry: IconRegistry = {
+export const neutralIconRegistry: IconRegistry & Record<string, React.ReactNode> = {
   close: <X {...iconProps} />,
   chevronDown: <ChevronDown {...iconProps} />,
   chevronLeft: <ChevronLeft {...iconProps} />,
