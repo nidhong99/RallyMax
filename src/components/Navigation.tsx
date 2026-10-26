@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { TopNav, TopNavHeading, TopNavItem } from '@astryxdesign/core/TopNav';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Button } from '@astryxdesign/core/Button';
@@ -11,8 +12,8 @@ import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 
 interface NavigationProps {
-  currentTab: 'explorer' | 'my-events' | 'admin-dashboard';
-  onSelectTab: (tab: 'explorer' | 'my-events' | 'admin-dashboard') => void;
+  currentTab?: string;
+  onSelectTab?: (tab: any) => void;
   onOpenCreateEvent: () => void;
   onOpenProfile: () => void;
   onOpenSupabaseGuide?: () => void;
@@ -28,7 +29,14 @@ export const Navigation: React.FC<NavigationProps> = ({
 }) => {
   const { currentUser, isLoggedIn, logout, isAdmin } = useApp();
   const { language, setLanguage, t } = useLanguage();
+  const location = useLocation();
+  const navigate = useNavigate();
   const isHost = (isAdmin || currentUser?.role === 'HOST' || currentUser?.role === 'ADMIN') && currentUser?.role !== 'PLAYER';
+
+  const pathname = location.pathname;
+  const isExplorer = pathname === '/' || pathname.startsWith('/matches');
+  const isMyEvents = pathname.startsWith('/my-events');
+  const isAdminDashboard = pathname.startsWith('/host/dashboard') || pathname.startsWith('/admin');
 
   return (
     <TopNav
@@ -36,6 +44,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       heading={
         <TopNavHeading
           heading={t('nav.brand')}
+          headingHref="/matches"
           logo={
             <HStack
               gap={1}
@@ -57,19 +66,28 @@ export const Navigation: React.FC<NavigationProps> = ({
         <HStack gap={2}>
           <TopNavItem
             label={t('nav.explore')}
-            isSelected={currentTab === 'explorer'}
-            onClick={() => onSelectTab('explorer')}
+            isSelected={isExplorer}
+            onClick={() => {
+              navigate('/matches');
+              if (onSelectTab) onSelectTab('explorer');
+            }}
           />
           <TopNavItem
             label={t('nav.myEvents')}
-            isSelected={currentTab === 'my-events'}
-            onClick={() => onSelectTab('my-events')}
+            isSelected={isMyEvents}
+            onClick={() => {
+              navigate('/my-events');
+              if (onSelectTab) onSelectTab('my-events');
+            }}
           />
           {isAdmin && (
             <TopNavItem
               label={t('nav.admin')}
-              isSelected={currentTab === 'admin-dashboard'}
-              onClick={() => onSelectTab('admin-dashboard')}
+              isSelected={isAdminDashboard}
+              onClick={() => {
+                navigate('/host/dashboard');
+                if (onSelectTab) onSelectTab('admin-dashboard');
+              }}
             />
           )}
         </HStack>
