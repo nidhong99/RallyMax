@@ -1,4 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+  useMatch,
+} from 'react-router-dom';
 import { Theme } from '@astryxdesign/core/theme';
 import { AppShell } from '@astryxdesign/core/AppShell';
 import { VStack } from '@astryxdesign/core/Stack';
@@ -16,48 +25,88 @@ import { ReviewModal } from './components/ReviewModal';
 import { SupabaseGuideModal } from './components/SupabaseGuideModal';
 import { AuthModal } from './components/AuthModal';
 import { Event } from './types/database';
+import { supabase } from './lib/supabase';
 
 const MainLayout: React.FC = () => {
   const { currentUser, events, isAdmin } = useApp();
   const { t } = useLanguage();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const [currentTab, setCurrentTab] = useState<'explorer' | 'my-events' | 'admin-dashboard'>('explorer');
+  const matchDetail = useMatch('/matches/:id');
+  const eventId = matchDetail?.params.id;
+  const isCreateRoute = location.pathname === '/matches/new' || location.pathname === '/create-event';
+  const isProfileRoute = location.pathname === '/profile';
+
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [clonedEvent, setClonedEvent] = useState<Event | null>(null);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewTargetEvent, setReviewTargetEvent] = useState<Event | null>(null);
   const [isSupabaseGuideOpen, setIsSupabaseGuideOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
-  // Realtime safety: If the currently viewed event is deleted by its Host, close the modal immediately
-  React.useEffect(() => {
-    if (isDetailOpen && selectedEvent) {
-      const stillExists = events.some((e) => e.id === selectedEvent.id);
-      if (!stillExists) {
-        setIsDetailOpen(false);
+  // Sync /matches/:id URL with selectedEvent state
+  useEffect(() => {
+    if (!eventId || eventId === 'new') {
+      if (selectedEvent) {
         setSelectedEvent(null);
       }
-    }
-  }, [events, selectedEvent, isDetailOpen]);
-
-  const handleSelectEvent = (event: Event) => {
-    setSelectedEvent(event);
-    setIsDetailOpen(true);
-  };
-
-  const [clonedEvent, setClonedEvent] = useState<Event | null>(null);
-
-  const handleOpenReview = (event: Event) => {
-    if (!currentUser) {
-      setIsAuthOpen(true);
       return;
     }
-    setReviewTargetEvent(event);
-    setIsReviewOpen(true);
+
+    // Try finding event from already loaded events
+    const existing = events.find((e) => e.id === eventId);
+    if (existing) {
+      setSelectedEvent(existing);
+      return;
+    }
+
+    // Fallback: If page was opened directly by URL or refreshed, fetch event from Supabase
+    if (supabase) {
+      supabase
+        .from('events')
+        .select(`
+          *,
+          venue:venues(*),
+          host:users!events_host_id_fkey(*),
+          registrations(*, user:users(*))
+        `)
+        .eq('id', eventId)
+        .single()
+        .then(({ data, error }) => {
+          if (data && !error) {
+            setSelectedEvent(data as unknown as Event);
+          }
+        });
+    }
+  }, [eventId, events]);
+
+  // Realtime safety: If the currently viewed event is deleted, close the modal immediately
+  useEffect(() => {
+    if (selectedEvent && events.length > 0) {
+      const stillExists = events.some((e) => e.id === selectedEvent.id);
+      if (!stillExists && eventId) {
+        handleCloseDetail();
+      }
+    }
+  }, [events, selectedEvent]);
+
+  // Handle Event Detail Modal open / close
+  const handleSelectEvent = (event: Event) => {
+    setSelectedEvent(event);
+    navigate(`/matches/${event.id}`);
   };
 
+  const handleCloseDetail = () => {
+    setSelectedEvent(null);
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/matches');
+    }
+  };
+
+  // Handle Create Event Modal open / close
   const handleOpenCreateEvent = (eventToClone?: Event) => {
     if (!currentUser) {
       setIsAuthOpen(true);
@@ -69,16 +118,46 @@ const MainLayout: React.FC = () => {
       return;
     }
     setClonedEvent(eventToClone || null);
-    setIsCreateOpen(true);
+    navigate('/matches/new');
   };
 
+  const handleCloseCreate = () => {
+    setClonedEvent(null);
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/matches');
+    }
+  };
+
+  // Handle Profile Modal open / close
   const handleOpenProfile = () => {
     if (!currentUser) {
       setIsAuthOpen(true);
       return;
     }
-    setIsProfileOpen(true);
+    navigate('/profile');
   };
+
+  const handleCloseProfile = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/matches');
+    }
+  };
+
+  // Handle Review Modal
+  const handleOpenReview = (event: Event) => {
+    if (!currentUser) {
+      setIsAuthOpen(true);
+      return;
+    }
+    setReviewTargetEvent(event);
+    setIsReviewOpen(true);
+  };
+
+const isDetailOpen = Boolean(eventId && eventId !== 'new' && selectedEvent);
 
   return (
     <AppShell
@@ -94,9 +173,7 @@ const MainLayout: React.FC = () => {
       }}
       topNav={
         <Navigation
-          currentTab={currentTab}
-          onSelectTab={setCurrentTab}
-          onOpenCreateEvent={handleOpenCreateEvent}
+          onOpenCreateEvent={() => handleOpenCreateEvent()}
           onOpenProfile={handleOpenProfile}
           onOpenSupabaseGuide={() => setIsSupabaseGuideOpen(true)}
           onOpenAuth={() => setIsAuthOpen(true)}
@@ -113,32 +190,72 @@ const MainLayout: React.FC = () => {
           flex: 1,
         }}
       >
-        {currentTab === 'explorer' && (
-          <EventExplorer
-            onSelectEvent={handleSelectEvent}
-            onOpenCreateEvent={handleOpenCreateEvent}
+        <Routes>
+          <Route path="/" element={<Navigate to="/matches" replace />} />
+          <Route
+            path="/matches"
+            element={
+              <EventExplorer
+                onSelectEvent={handleSelectEvent}
+                onOpenCreateEvent={() => handleOpenCreateEvent()}
+              />
+            }
           />
-        )}
-
-        {currentTab === 'my-events' && (
-          <MyEventsView
-            onSelectEvent={handleSelectEvent}
-            onOpenCreateEvent={handleOpenCreateEvent}
-            onCloneEvent={handleOpenCreateEvent}
-            onExplore={() => setCurrentTab('explorer')}
-            onOpenReview={handleOpenReview}
+          <Route
+            path="/matches/:id"
+            element={
+              <EventExplorer
+                onSelectEvent={handleSelectEvent}
+                onOpenCreateEvent={() => handleOpenCreateEvent()}
+              />
+            }
           />
-        )}
-
-        {currentTab === 'admin-dashboard' && (
-          <AdminDashboardView
-            onSelectEvent={handleSelectEvent}
-            onOpenCreateEvent={handleOpenCreateEvent}
+          <Route
+            path="/matches/new"
+            element={
+              <EventExplorer
+                onSelectEvent={handleSelectEvent}
+                onOpenCreateEvent={() => handleOpenCreateEvent()}
+              />
+            }
           />
-        )}
+          <Route path="/create-event" element={<Navigate to="/matches/new" replace />} />
+          <Route
+            path="/my-events"
+            element={
+              <MyEventsView
+                onSelectEvent={handleSelectEvent}
+                onOpenCreateEvent={() => handleOpenCreateEvent()}
+                onCloneEvent={(ev) => handleOpenCreateEvent(ev)}
+                onExplore={() => navigate('/matches')}
+                onOpenReview={handleOpenReview}
+              />
+            }
+          />
+          <Route
+            path="/host/dashboard"
+            element={
+              <AdminDashboardView
+                onSelectEvent={handleSelectEvent}
+                onOpenCreateEvent={() => handleOpenCreateEvent()}
+              />
+            }
+          />
+          <Route path="/admin" element={<Navigate to="/host/dashboard" replace />} />
+          <Route
+            path="/profile"
+            element={
+              <EventExplorer
+                onSelectEvent={handleSelectEvent}
+                onOpenCreateEvent={() => handleOpenCreateEvent()}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/matches" replace />} />
+        </Routes>
       </VStack>
 
-      {/* Modals */}
+      {/* Modals synced with URL state */}
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
@@ -147,24 +264,21 @@ const MainLayout: React.FC = () => {
       <EventDetailModal
         event={selectedEvent}
         isOpen={isDetailOpen}
-        onClose={() => setIsDetailOpen(false)}
+        onClose={handleCloseDetail}
         onOpenReview={handleOpenReview}
         onCloneEvent={(ev) => handleOpenCreateEvent(ev)}
         onSelectEvent={handleSelectEvent}
       />
 
       <CreateEventModal
-        isOpen={isCreateOpen}
-        onClose={() => {
-          setIsCreateOpen(false);
-          setClonedEvent(null);
-        }}
+        isOpen={isCreateRoute}
+        onClose={handleCloseCreate}
         initialEvent={clonedEvent}
       />
 
       <ProfileModal
-        isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
+        isOpen={isProfileRoute && Boolean(currentUser)}
+        onClose={handleCloseProfile}
       />
 
       <ReviewModal
@@ -186,7 +300,9 @@ export default function App() {
     <Theme theme={neutralTheme} mode="light">
       <LanguageProvider>
         <AppProvider>
-          <MainLayout />
+          <BrowserRouter>
+            <MainLayout />
+          </BrowserRouter>
         </AppProvider>
       </LanguageProvider>
     </Theme>

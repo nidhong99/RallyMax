@@ -769,6 +769,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   const displayRole: UserRole = u.role || 'PLAYER';
                   const score = u.reliability_score ?? 100;
                   const isLowScore = score < 90;
+                  const isCurrentAdmin = u.id === currentUser?.id;
 
                   return (
                     <tr
