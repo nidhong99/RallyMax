@@ -1,0 +1,33 @@
+# Antigravity Workspace Rules - RallyMax
+
+## Security & CodeQL Rules
+
+To prevent introducing high/critical severity security alerts tracked by GitHub CodeQL:
+
+1. **Insecure Randomness (`js/insecure-randomness`):**
+   - NEVER use `Math.random()` to generate IDs, verification codes, session IDs, or tokens.
+   - ALWAYS use `crypto.randomUUID()` or `crypto.getRandomValues()`.
+
+2. **Incomplete URL Substring Sanitization (`js/incomplete-url-substring-sanitization`):**
+   - NEVER use `.includes()` or loose substring regex matching to validate domains or URLs (e.g. `!url.includes('example.com')`).
+   - ALWAYS parse URLs using `new URL(urlStr)` in a try/catch block and compare `parsedUrl.hostname` against explicit allowed hostnames or using strict suffix matching (`parsedUrl.hostname.endsWith('.example.com')`).
+
+3. **Clear-Text Storage of Sensitive Data (`js/clear-text-storage-of-sensitive-data`):**
+   - NEVER call `localStorage.setItem(...)` or `sessionStorage.setItem(...)` directly with user/account profiles, auth objects, or variables named `password`, `token`, `secret`, `auth`, `pin`.
+   - ALWAYS route state storage through `savePublicAppState(key, safeData)` which sanitizes and strips sensitive properties.
+   - Supabase Auth must remain the exclusive handler of authentication tokens.
+
+
+## Repository Hygiene & Package Management Rules
+
+1. **Package Manager Enforcement:**
+   - Strictly use `pnpm` (`pnpm install`, `pnpm add`, `pnpm run ...`).
+   - Never commit `package-lock.json`, `yarn.lock`, `dist/`, `.DS_Store`, or any `.env` file to Git.
+
+## Database & Supabase Security Rules
+
+1. **Server-Side Enforcement Over UI Guards:**
+   - Never write Supabase RLS policies that trust frontend UI guards alone.
+   - Always enforce `profiles.role` checks (`IN ('HOST', 'ADMIN')`) and user identity (`auth.uid()`) directly at the PostgreSQL policy level (`WITH CHECK` / `USING`).
+2. **Column-Level Restriction & Privilege Escalation Prevention:**
+   - Always protect sensitive columns (such as `role`, `is_verified_host`, `reliability_score`, `total_no_shows` on `profiles`, or `status`, `payment_status` on `event_registrations`) using PostgreSQL `BEFORE UPDATE ... SECURITY DEFINER` triggers.

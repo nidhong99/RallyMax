@@ -67,14 +67,115 @@ const isMockId = (id?: string): boolean => {
 };
 
 const generateUuid = (): string => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const buffer = new Uint8Array(16);
+    crypto.getRandomValues(buffer);
+    buffer[6] = (buffer[6] & 0x0f) | 0x40; // Version 4
+    buffer[8] = (buffer[8] & 0x3f) | 0x80; // Variant 10
+    const hex = Array.from(buffer, b => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+  }
+  return '00000000-0000-4000-8000-000000000000';
+};
+
+// ============================================================================
+// Security & CodeQL Sanitized Storage Helper
+// Ensures NO sensitive fields (password, token, secret, auth, pin) are stored
+// in cleartext localStorage. Supabase Auth exclusively manages auth tokens.
+// ============================================================================
+const SENSITIVE_KEY_REGEX = /password|token|secret|auth|pin|credential|access_token|refresh_token/i;
+
+const sanitizePublicProfile = (p: any): Profile => {
+  return {
+    id: String(p?.id || ''),
+    email: String(p?.email || ''),
+    full_name: String(p?.full_name || 'Vận động viên'),
+    avatar_url: p?.avatar_url,
+    phone_number: p?.phone_number,
+    gender: p?.gender || 'OTHER',
+    birth_year: p?.birth_year,
+    skill_level: p?.skill_level || 'BEGINNER',
+    dominant_hand: p?.dominant_hand || 'RIGHT',
+    play_style: p?.play_style || 'ALL_ROUND',
+    bio: p?.bio,
+    district_code: p?.district_code || 'HN_BD',
+    role: p?.role || 'PLAYER',
+    is_verified_host: Boolean(p?.is_verified_host),
+    reliability_score: typeof p?.reliability_score === 'number' ? p.reliability_score : 100,
+    total_matches_played: typeof p?.total_matches_played === 'number' ? p.total_matches_played : 0,
+    total_no_shows: typeof p?.total_no_shows === 'number' ? p.total_no_shows : 0,
+    created_at: p?.created_at,
+    updated_at: p?.updated_at,
+  };
+};
+
+const deepSanitize = (val: any): any => {
+  if (val === null || val === undefined) return val;
+  if (typeof val !== 'object') return val;
+  if (Array.isArray(val)) return val.map(deepSanitize);
+
+  const clean: Record<string, any> = {};
+  for (const [k, v] of Object.entries(val)) {
+    if (SENSITIVE_KEY_REGEX.test(k)) {
+      continue;
+    }
+    clean[k] = deepSanitize(v);
+  }
+  return clean;
+};
+
+const sanitizePublicEvent = (e: any): any => {
+  if (!e || typeof e !== 'object') return e;
+  return {
+    ...deepSanitize(e),
+    host: e.host ? sanitizePublicProfile(e.host) : undefined,
+    registrations: Array.isArray(e.registrations)
+      ? e.registrations.map((r: any) => ({
+          ...deepSanitize(r),
+          player: r.player ? sanitizePublicProfile(r.player) : undefined,
+        }))
+      : [],
+  };
+};
+
+const sanitizePublicState = (key: string, data: any): any => {
+  if (key === 'rallymax_current_user') {
+    return data ? sanitizePublicProfile(data) : null;
+  }
+  if (key === 'rallymax_users') {
+    return Array.isArray(data) ? data.map(sanitizePublicProfile) : [];
+  }
+  if (key === 'rallymax_events') {
+    return Array.isArray(data) ? data.map(sanitizePublicEvent) : [];
+  }
+  return deepSanitize(data);
+};
+
+export const savePublicAppState = (key: string, safeData: unknown): void => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    if (typeof safeData === 'string') {
+      if (!SENSITIVE_KEY_REGEX.test(key) && !SENSITIVE_KEY_REGEX.test(safeData)) {
+        window.localStorage.setItem(key, safeData);
+      }
+      return;
+    }
+    const sanitized = sanitizePublicState(key, safeData);
+    window.localStorage.setItem(key, JSON.stringify(sanitized));
+  } catch (err) {
+    console.warn(`[Storage] Error persisting ${key}:`, err);
+  }
+};
+
+export const removePublicAppState = (key: string): void => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(key);
+    }
+  } catch (err) {}
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -85,7 +186,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let list: Profile[] = saved ? JSON.parse(saved) : [];
     // Permanently purge mock users
     list = list.filter(u => !isMockEmail(u.email) && !isMockId(u.id));
-    localStorage.setItem('rallymax_users', JSON.stringify(list));
+    savePublicAppState('rallymax_users', list);
     return list;
   });
 
@@ -200,7 +301,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               (userMeta.role === 'ADMIN' || userMeta.role === 'HOST') ? userMeta.role : 'PLAYER';
 
             const userFromHash: Profile = {
-              id: payload.sub || 'user-' + Date.now(),
+              id: payload.sub || 'user-' + generateUuid(),
               email: userEmail,
               full_name: fullName,
               avatar_url: avatarUrl,
@@ -265,7 +366,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 created_at: p.created_at || new Date().toISOString(),
               };
             });
-          localStorage.setItem('rallymax_users', JSON.stringify(validProfiles));
+          savePublicAppState('rallymax_users', validProfiles);
           return validProfiles;
         });
 
@@ -284,7 +385,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               is_verified_host: freshData.is_verified_host ?? (roleFromDb === 'HOST' || roleFromDb === 'ADMIN'),
               full_name: freshData.full_name || current.full_name,
             };
-            localStorage.setItem('rallymax_current_user', JSON.stringify(updated));
+            savePublicAppState('rallymax_current_user', updated);
             setActiveRole(roleFromDb === 'ADMIN' ? 'admin' : (roleFromDb === 'HOST' ? 'host' : 'player'));
             return updated;
           }
@@ -304,7 +405,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .then(({ data, error }) => {
           if (data && !error && data.length > 0) {
             setVenues(data);
-            localStorage.setItem('rallymax_venues', JSON.stringify(data));
+            savePublicAppState('rallymax_venues', data);
           } else if (error) {
             console.warn('Supabase venues query error:', error.message);
           }
@@ -371,7 +472,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               });
 
               const merged = Array.from(map.values());
-              localStorage.setItem('rallymax_events', JSON.stringify(merged));
+              savePublicAppState('rallymax_events', merged);
               return merged;
             });
           }
@@ -394,7 +495,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const deletedId = payload.old.id;
             setEvents(prev => {
               const filtered = prev.filter(e => e.id !== deletedId);
-              localStorage.setItem('rallymax_events', JSON.stringify(filtered));
+              savePublicAppState('rallymax_events', filtered);
               return filtered;
             });
           }
@@ -416,7 +517,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const deletedId = payload.old.id;
             setVenues(prev => {
               const filtered = prev.filter(v => v.id !== deletedId);
-              localStorage.setItem('rallymax_venues', JSON.stringify(filtered));
+              savePublicAppState('rallymax_venues', filtered);
               return filtered;
             });
           } else {
@@ -462,7 +563,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       setAllUsers(prev => {
         const next = [newProfile, ...prev];
-        localStorage.setItem('rallymax_users', JSON.stringify(next));
+        savePublicAppState('rallymax_users', next);
         return next;
       });
       login(newProfile);
@@ -484,15 +585,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setCurrentUser(profileToStore);
     setActiveRole(finalRole === 'ADMIN' ? 'admin' : (finalRole === 'HOST' ? 'host' : 'player'));
-    localStorage.setItem('rallymax_current_user_id', profileToStore.id);
-    localStorage.setItem('rallymax_current_user', JSON.stringify(profileToStore));
+    savePublicAppState('rallymax_current_user_id', profileToStore.id);
+    savePublicAppState('rallymax_current_user', profileToStore);
 
     setAllUsers(prev => {
       const exists = prev.some(u => u.id === profileToStore.id || u.email.toLowerCase() === profileToStore.email.toLowerCase());
       const next = exists
         ? prev.map(u => (u.id === profileToStore.id || u.email.toLowerCase() === profileToStore.email.toLowerCase()) ? { ...u, ...profileToStore } : u)
         : [profileToStore, ...prev];
-      localStorage.setItem('rallymax_users', JSON.stringify(next));
+      savePublicAppState('rallymax_users', next);
       return next;
     });
 
@@ -513,7 +614,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return e;
       });
       if (hasChange) {
-        localStorage.setItem('rallymax_events', JSON.stringify(updated));
+        savePublicAppState('rallymax_events', updated);
         return updated;
       }
       return prev;
@@ -529,8 +630,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Sign out error:', e);
     }
     setCurrentUser(null);
-    localStorage.removeItem('rallymax_current_user');
-    localStorage.setItem('rallymax_current_user_id', 'guest');
+    removePublicAppState('rallymax_current_user');
+    savePublicAppState('rallymax_current_user_id', 'guest');
   };
 
   const loginByEmail = async (
@@ -655,7 +756,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     // Fallback demo Google user
     const googleUser: Profile = {
-      id: 'google-user-' + Date.now(),
+      id: 'google-user-' + generateUuid(),
       email: 'user.google@gmail.com',
       full_name: 'Người Chơi Google (Gmail)',
       avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
@@ -687,7 +788,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     // Fallback demo Facebook user
     const fbUser: Profile = {
-      id: 'fb-user-' + Date.now(),
+      id: 'fb-user-' + generateUuid(),
       email: 'player.facebook@fb.com',
       full_name: 'Vận Động Viên Facebook',
       avatar_url: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
@@ -730,19 +831,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Persist local state
   useEffect(() => {
-    localStorage.setItem('rallymax_users', JSON.stringify(allUsers));
+    savePublicAppState('rallymax_users', allUsers);
   }, [allUsers]);
 
   useEffect(() => {
-    localStorage.setItem('rallymax_venues', JSON.stringify(venues));
+    savePublicAppState('rallymax_venues', venues);
   }, [venues]);
 
   useEffect(() => {
-    localStorage.setItem('rallymax_events', JSON.stringify(events));
+    savePublicAppState('rallymax_events', events);
   }, [events]);
 
   useEffect(() => {
-    localStorage.setItem('rallymax_reviews', JSON.stringify(reviews));
+    savePublicAppState('rallymax_reviews', reviews);
   }, [reviews]);
 
   const switchUser = (userId: string) => {
@@ -766,7 +867,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const matchedVenue = venues.find(v => v.id === eventData.venue_id || v.name === eventData.venue_name);
     const venueName = eventData.venue_name || matchedVenue?.name || 'Sân Cầu Lông';
     const fallbackVenue: Venue = {
-      id: eventData.venue_id || matchedVenue?.id || 'custom-venue-' + Date.now(),
+      id: eventData.venue_id || matchedVenue?.id || 'custom-venue-' + generateUuid(),
       name: venueName,
       address: matchedVenue?.address || eventData.location_url || 'Đang cập nhật địa chỉ',
       district_code: matchedVenue?.district_code || 'HN_BD',
@@ -866,7 +967,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               },
               host: currentUser,
             } : e));
-            localStorage.setItem('rallymax_events', JSON.stringify(next));
+            savePublicAppState('rallymax_events', next);
             return next;
           });
         };
@@ -940,7 +1041,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 1. Immediately remove from local state
     setEvents(prev => {
       const next = prev.filter(e => e.id !== eventId);
-      localStorage.setItem('rallymax_events', JSON.stringify(next));
+      savePublicAppState('rallymax_events', next);
       return next;
     });
 
@@ -1017,7 +1118,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (targetEvent.host_id !== currentUser.id) {
       setNotifications(prev => [
         {
-          id: 'notif-' + Date.now(),
+          id: 'notif-' + generateUuid(),
           user_id: targetEvent.host_id,
           event_id: eventId,
           type: 'NEW_APPLICANT',
@@ -1119,7 +1220,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (data) {
       setVenues(data);
-      localStorage.setItem('rallymax_venues', JSON.stringify(data));
+      savePublicAppState('rallymax_venues', data);
     }
   };
 
@@ -1166,7 +1267,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setVenues(prev => {
       const updated = [newVenue, ...prev.filter(v => v.id !== newVenue.id)];
-      localStorage.setItem('rallymax_venues', JSON.stringify(updated));
+      savePublicAppState('rallymax_venues', updated);
       return updated;
     });
 
@@ -1194,7 +1295,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setVenues(prev => {
       const updated = prev.map(v => (v.id === venueId ? { ...v, ...venueData } : v));
-      localStorage.setItem('rallymax_venues', JSON.stringify(updated));
+      savePublicAppState('rallymax_venues', updated);
       return updated;
     });
   };
@@ -1210,7 +1311,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setVenues(prev => {
       const filtered = prev.filter(v => v.id !== venueId);
-      localStorage.setItem('rallymax_venues', JSON.stringify(filtered));
+      savePublicAppState('rallymax_venues', filtered);
       return filtered;
     });
   };
@@ -1229,7 +1330,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         return u;
       });
-      localStorage.setItem('rallymax_users', JSON.stringify(updated));
+      savePublicAppState('rallymax_users', updated);
       return updated;
     });
 
@@ -1240,7 +1341,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           role: newRole,
           is_verified_host: verified,
         };
-        localStorage.setItem('rallymax_current_user', JSON.stringify(updatedUser));
+        savePublicAppState('rallymax_current_user', updatedUser);
         setActiveRole(newRole === 'ADMIN' ? 'admin' : (newRole === 'HOST' ? 'host' : 'player'));
         return updatedUser;
       }
@@ -1272,14 +1373,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         return u;
       });
-      localStorage.setItem('rallymax_users', JSON.stringify(updated));
+      savePublicAppState('rallymax_users', updated);
       return updated;
     });
 
     setCurrentUser(current => {
       if (current && current.id === userId) {
         const updated = { ...current, reliability_score: 100, total_no_shows: 0 };
-        localStorage.setItem('rallymax_current_user', JSON.stringify(updated));
+        savePublicAppState('rallymax_current_user', updated);
         return updated;
       }
       return current;
@@ -1299,7 +1400,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 1. Remove from allUsers in memory and in localStorage
     setAllUsers(prev => {
       const updated = prev.filter(u => u.id !== userId);
-      localStorage.setItem('rallymax_users', JSON.stringify(updated));
+      savePublicAppState('rallymax_users', updated);
       return updated;
     });
 
@@ -1321,7 +1422,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const purgeMockUsers = () => {
     setAllUsers(prev => {
       const cleaned = prev.filter(u => !isMockEmail(u.email) && !isMockId(u.id));
-      localStorage.setItem('rallymax_users', JSON.stringify(cleaned));
+      savePublicAppState('rallymax_users', cleaned);
       return cleaned;
     });
   };
@@ -1358,7 +1459,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             };
           });
         setAllUsers(validProfiles);
-        localStorage.setItem('rallymax_users', JSON.stringify(validProfiles));
+        savePublicAppState('rallymax_users', validProfiles);
 
         setCurrentUser(current => {
           if (!current) return null;
@@ -1374,7 +1475,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               is_verified_host: freshData.is_verified_host ?? (roleFromDb === 'HOST' || roleFromDb === 'ADMIN'),
               full_name: freshData.full_name || current.full_name,
             };
-            localStorage.setItem('rallymax_current_user', JSON.stringify(updated));
+            savePublicAppState('rallymax_current_user', updated);
             setActiveRole(roleFromDb === 'ADMIN' ? 'admin' : (roleFromDb === 'HOST' ? 'host' : 'player'));
             return updated;
           }
@@ -1396,7 +1497,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addReview = async (reviewData: Partial<Review>) => {
     if (!currentUser) return;
     const newReview: Review = {
-      id: 'rev-' + Date.now(),
+      id: 'rev-' + generateUuid(),
       event_id: reviewData.event_id || '',
       reviewer_id: currentUser.id,
       reviewee_id: reviewData.reviewee_id || '',

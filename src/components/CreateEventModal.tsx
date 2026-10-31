@@ -24,6 +24,20 @@ import { Upload, Trash2, CheckCircle2, Move, Clock, Sparkles, Copy, Repeat, Aler
 const DEFAULT_COVER_PRESET =
   'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1200&auto=format&fit=crop&q=80';
 
+const isUnsplashUrl = (inputUrl?: string): boolean => {
+  if (!inputUrl) return false;
+  try {
+    const parsedUrl = new URL(inputUrl);
+    return (
+      parsedUrl.hostname === 'unsplash.com' ||
+      parsedUrl.hostname === 'images.unsplash.com' ||
+      parsedUrl.hostname.endsWith('.unsplash.com')
+    );
+  } catch {
+    return false;
+  }
+};
+
 const DURATION_OPTIONS = [
   { label: '1 giờ', minutes: 60 },
   { label: '1 giờ 30 phút', minutes: 90 },
@@ -303,7 +317,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
     setCourtNumbers(ev.court_numbers || 'Sân 1');
 
-    if (ev.cover_image_url && !ev.cover_image_url.includes('unsplash.com')) {
+    if (ev.cover_image_url && !isUnsplashUrl(ev.cover_image_url)) {
       setCoverMode('custom');
       setCustomCoverUrl(ev.cover_image_url);
       if (ev.cover_image_position) {
@@ -649,7 +663,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         // Shared series group ID for all sessions in this recurring pattern
         const recurrenceGroupId = typeof crypto !== 'undefined' && crypto.randomUUID
           ? crypto.randomUUID()
-          : `rec-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          : `rec-${Date.now()}-${typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID().slice(0, 8) : Date.now().toString(36)}`;
 
         for (let i = 0; i < datesToCreate.length; i++) {
           const dateItem = datesToCreate[i];

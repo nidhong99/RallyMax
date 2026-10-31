@@ -31,3 +31,46 @@ RULES:
   docs cli           commands, API reference, integration authoring
   upgrade --from <old version> --apply   run after a dependency bump
 <!-- ASTRYX:END -->
+
+## Security & CodeQL Rules
+
+To maintain a zero-alert status on GitHub CodeQL (High/Critical severity), all agents and developers must strictly adhere to the following rules:
+
+1. **Cryptographically Secure Randomness (`js/insecure-randomness`):**
+   - **Never** use `Math.random()` for IDs, tokens, verification codes, salt, or state keys.
+   - **Always** use the Web Crypto API:
+     - For UUIDs: `crypto.randomUUID()` (with fallback to `crypto.getRandomValues()`).
+     - For numbers/tokens: `crypto.getRandomValues(new Uint32Array(1))[0]`.
+
+2. **Strict URL & Domain Parsing (`js/incomplete-url-substring-sanitization`):**
+   - **Never** validate hostnames or URLs using `.includes()` or loose regular expressions (e.g. `!url.includes('example.com')`).
+   - **Always** parse the URL safely inside a `try/catch` block and check exact hostnames or strict suffix matching on `parsedUrl.hostname`:
+     ```ts
+     try {
+       const parsedUrl = new URL(inputUrl);
+       return parsedUrl.hostname === 'example.com' || parsedUrl.hostname.endsWith('.example.com');
+     } catch {
+       return false;
+     }
+     ```
+
+3. **Sanitized Storage & Sensitive Data Protection (`js/clear-text-storage-of-sensitive-data`):**
+   - **Never** serialize sensitive credentials (`password`, `token`, `secret`, `auth`, `pin`, `access_token`, `refresh_token`, etc.) into `localStorage` or `sessionStorage`.
+   - Supabase Auth exclusively manages auth tokens and session tokens.
+   - **Never** call `localStorage.setItem` or `sessionStorage.setItem` directly with user profiles, auth payloads, or tainted objects.
+   - **Always** route state persistence through the centralized sanitized helper `savePublicAppState(key, safeData)` in `src/context/AppContext.tsx`, which explicitly strips any sensitive fields and picks only non-sensitive public UI properties.
+
+
+## Repository Hygiene & Package Management Rules
+
+1. **Package Manager Enforcement:**
+   - **Strictly use `pnpm`** (`pnpm install`, `pnpm add`, `pnpm run ...`).
+   - **Never** commit `package-lock.json`, `yarn.lock`, `dist/`, `.DS_Store`, or any `.env` / `.env.*` file to Git.
+
+## Database & Supabase Security Rules
+
+1. **Server-Side Enforcement Over UI Guards:**
+   - **Never** write Supabase RLS policies that trust frontend UI guards alone.
+   - Always enforce `profiles.role` checks (`IN ('HOST', 'ADMIN')`) and user identity (`auth.uid()`) directly at the PostgreSQL policy level (`WITH CHECK` / `USING`).
+2. **Column-Level Restriction & Privilege Escalation Prevention:**
+   - Always protect sensitive columns (such as `role`, `is_verified_host`, `reliability_score`, `total_no_shows` on `profiles`, or `status`, `payment_status` on `event_registrations`) using PostgreSQL `BEFORE UPDATE ... SECURITY DEFINER` triggers so malicious clients cannot update unauthorized columns from the browser console.

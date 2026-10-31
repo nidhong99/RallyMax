@@ -74,11 +74,39 @@ ON public.profiles FOR SELECT
 USING (true);
 
 -- 2. Chỉ người sở hữu tài khoản mới được sửa profile của chính mình
+-- Trigger ngăn chặn Privilege Escalation (không cho user tự đổi role, is_verified_host, reliability_score)
+CREATE OR REPLACE FUNCTION public.protect_profile_fields()
+RETURNS TRIGGER AS $
+DECLARE
+    current_user_role TEXT;
+BEGIN
+    SELECT role INTO current_user_role FROM public.profiles WHERE id = auth.uid();
+    IF current_user_role IS DISTINCT FROM 'ADMIN' THEN
+        IF NEW.role IS DISTINCT FROM OLD.role THEN
+            RAISE EXCEPTION 'Chỉ Admin mới có quyền thay đổi role.';
+        END IF;
+        IF NEW.is_verified_host IS DISTINCT FROM OLD.is_verified_host THEN
+            RAISE EXCEPTION 'Chỉ Admin mới có quyền xác minh Host.';
+        END IF;
+        IF NEW.reliability_score IS DISTINCT FROM OLD.reliability_score THEN
+            RAISE EXCEPTION 'Không thể tự ý chỉnh sửa điểm uy tín.';
+        END IF;
+    END IF;
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END;
+$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_protect_profile_fields ON public.profiles;
+CREATE TRIGGER trg_protect_profile_fields
+    BEFORE UPDATE ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION public.protect_profile_fields();
+
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile" 
 ON public.profiles FOR UPDATE 
-USING (auth.uid() = id)
-WITH CHECK (auth.uid() = id);
+USING (auth.uid() = id OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'ADMIN'))
+WITH CHECK (auth.uid() = id OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'ADMIN'));
 ```
 
 ---
@@ -100,7 +128,8 @@ CREATE POLICY "Hosts can create events"
 ON public.events FOR INSERT 
 WITH CHECK (
     auth.role() = 'authenticated' AND 
-    auth.uid() = host_id
+    auth.uid() = host_id AND
+    EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role IN ('HOST', 'ADMIN'))
 );
 
 -- 3. CHỈ DUY NHẤT Host tạo ra sự kiện mới được sửa hoặc hủy sự kiện đó
@@ -157,23 +186,66 @@ WITH CHECK (
 -- 3. Phân quyền Cập nhật (UPDATE) đơn đăng ký:
 -- A. Player chỉ được tự hủy đơn (status = 'CANCELLED')
 -- B. Host có toàn quyền duyệt (APPROVED/REJECTED), điểm danh (CHECKED_IN/NO_SHOW), thu phí (PAID)
+-- Trigger khóa quyền cập nhật: Player chỉ được tự hủy đơn (status = 'CANCELLED')
+-- Host và Admin có toàn quyền duyệt đơn, điểm danh, xác nhận thu tiền
+CREATE OR REPLACE FUNCTION public.protect_registration_updates()
+RETURNS TRIGGER AS $
+DECLARE
+    v_event_host_id UUID;
+    v_user_role TEXT;
+BEGIN
+    SELECT host_id INTO v_event_host_id FROM public.events WHERE id = OLD.event_id;
+    SELECT role INTO v_user_role FROM public.profiles WHERE id = auth.uid();
+
+    IF v_user_role = 'ADMIN' OR auth.uid() = v_event_host_id THEN
+        RETURN NEW;
+    END IF;
+
+    IF auth.uid() = OLD.player_id THEN
+        IF NEW.event_id <> OLD.event_id OR NEW.player_id <> OLD.player_id THEN
+            RAISE EXCEPTION 'Không thể thay đổi event_id hoặc player_id.';
+        END IF;
+        IF NEW.payment_status IS DISTINCT FROM OLD.payment_status THEN
+            RAISE EXCEPTION 'Người chơi không thể tự xác nhận thanh toán.';
+        END IF;
+        IF NEW.status IS DISTINCT FROM OLD.status THEN
+            IF NEW.status <> 'CANCELLED' THEN
+                RAISE EXCEPTION 'Người chơi chỉ có thể hủy đăng ký (CANCELLED).';
+            END IF;
+            NEW.cancelled_at := NOW();
+        END IF;
+        RETURN NEW;
+    END IF;
+    RAISE EXCEPTION 'Không có quyền cập nhật.';
+END;
+$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_protect_registration_updates ON public.event_registrations;
+CREATE TRIGGER trg_protect_registration_updates
+    BEFORE UPDATE ON public.event_registrations
+    FOR EACH ROW EXECUTE FUNCTION public.protect_registration_updates();
+
 DROP POLICY IF EXISTS "Update registrations policy" ON public.event_registrations;
 CREATE POLICY "Update registrations policy" 
 ON public.event_registrations FOR UPDATE 
 USING (
-    -- Là chính người chơi đó
     player_id = auth.uid() OR
-    -- Hoặc là Host của sự kiện
     EXISTS (
         SELECT 1 FROM public.events e 
-        WHERE e.id = event_registrations.event_id AND e.host_id = auth.uid()
+        WHERE e.id = event_registrations.event_id AND (
+            e.host_id = auth.uid() OR
+            EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'ADMIN')
+        )
     )
 )
 WITH CHECK (
     player_id = auth.uid() OR
     EXISTS (
         SELECT 1 FROM public.events e 
-        WHERE e.id = event_registrations.event_id AND e.host_id = auth.uid()
+        WHERE e.id = event_registrations.event_id AND (
+            e.host_id = auth.uid() OR
+            EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'ADMIN')
+        )
     )
 );
 ```
