@@ -194,12 +194,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                       </Text>
                     </VStack>
                   ),
-                  endContent: (
-                    <Badge
-                      variant={(currentUser.reliability_score ?? 100) >= 90 ? 'green' : 'yellow'}
-                      label={`${currentUser.reliability_score ?? 100}%`}
-                    />
-                  ),
+
                 },
                 {
                   type: 'divider' as const,

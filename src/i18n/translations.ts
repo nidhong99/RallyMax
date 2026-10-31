@@ -65,7 +65,6 @@ export interface Translations {
     slots: string;
     map: string;
     host: string;
-    reliability: string;
     fee: string;
     manage: string;
     viewApplication: string;
@@ -168,7 +167,6 @@ export const translations: Record<Language, Translations> = {
       slots: '🏸 {count}/{max} slot',
       map: 'Bản đồ ↗',
       host: 'Host',
-      reliability: 'uy tín',
       fee: 'Phí tham gia',
       manage: 'Quản lý kèo',
       viewApplication: 'Xem đơn',
@@ -276,7 +274,6 @@ export const translations: Record<Language, Translations> = {
       slots: '🏸 {count}/{max} slots',
       map: 'Map ↗',
       host: 'Host',
-      reliability: 'reliability',
       fee: 'Fee',
       manage: 'Manage',
       viewApplication: 'View Status',

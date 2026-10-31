@@ -1,5 +1,5 @@
 import { Select } from './Select';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
@@ -9,6 +9,7 @@ import { Event, SKILL_LABELS } from '../types/database';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { DISTRICTS } from '../constants/locations';
+import { Coordinates, getUserCoordinates, getVenueCoordinates, calculateDistanceKm } from '../utils/geolocation';
 
 interface EventExplorerProps {
   onSelectEvent: (event: Event) => void;
@@ -28,10 +29,31 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
   const [districtFilter, setDistrictFilter] = useState('ALL');
   const [skillFilter, setSkillFilter] = useState<string>('ALL');
   const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
+
+  // Tự động kiểm tra vị trí nếu user cho phép (nếu không cho phép thì hiển thị bình thường)
+  useEffect(() => {
+    getUserCoordinates()
+      .then((coords) => setUserLocation(coords))
+      .catch(() => {
+        // Người dùng từ chối hoặc trình duyệt không hỗ trợ: hiển thị bình thường, không báo lỗi
+        setUserLocation(null);
+      });
+  }, []);
 
   // Filter logic
-  const filteredEvents = events.filter((e) => {
-    // Search keyword
+  const now = Date.now();
+  const filteredEvents = events
+    .filter((e) => {
+      // 1. Chỉ hiển thị kèo sắp tới hoặc đang diễn ra; ẩn kèo đã kết thúc (không xóa dữ liệu gốc)
+      const eventEndTime = e.end_time
+        ? new Date(e.end_time).getTime()
+        : new Date(e.start_time).getTime();
+      if (!isNaN(eventEndTime) && eventEndTime < now) {
+        return false;
+      }
+
+      // Search keyword
     const matchSearch =
       !searchTerm ||
       e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -56,7 +78,29 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
     const matchAvailable = !onlyAvailable || (!isFull && e.status === 'OPEN');
 
     return matchSearch && matchDistrict && matchSkill && matchAvailable;
-  });
+    })
+    .sort((a, b) => {
+      // Nếu user cho phép sử dụng vị trí: tự động sắp xếp từ gần đến xa
+      if (userLocation) {
+        const coordsA = getVenueCoordinates(a.venue);
+        const coordsB = getVenueCoordinates(b.venue);
+        const distA = coordsA
+          ? calculateDistanceKm(userLocation.latitude, userLocation.longitude, coordsA.latitude, coordsA.longitude)
+          : 99999;
+        const distB = coordsB
+          ? calculateDistanceKm(userLocation.latitude, userLocation.longitude, coordsB.latitude, coordsB.longitude)
+          : 99999;
+        if (distA !== distB) {
+          return distA - distB;
+        }
+      }
+
+      // Mặc định hoặc khi không có vị trí: sắp xếp theo thời gian diễn ra
+      const timeA = new Date(a.start_time).getTime();
+      const timeB = new Date(b.start_time).getTime();
+      if (isNaN(timeA) || isNaN(timeB)) return 0;
+      return timeA - timeB;
+    });
 
   return (
     <VStack gap={4} style={{ width: '100%' }}>
@@ -251,6 +295,7 @@ export const EventExplorer: React.FC<EventExplorerProps> = ({
               key={event.id}
               event={event}
               onSelect={onSelectEvent}
+              userLocation={userLocation}
             />
           ))}
         </HStack>

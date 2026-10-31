@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { calculateDistanceKm, getVenueCoordinates, Coordinates } from '../utils/geolocation';
 import { Card } from '@astryxdesign/core/Card';
 import { VStack, HStack } from '@astryxdesign/core/Stack';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -17,9 +18,10 @@ const DEFAULT_EVENT_COVER =
 interface EventCardProps {
   event: Event;
   onSelect: (event: Event) => void;
+  userLocation?: Coordinates | null;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
+export const EventCard: React.FC<EventCardProps> = ({ event, onSelect, userLocation }) => {
   const { currentUser } = useApp();
   const { t, formatCurrency, formatDateRange, language } = useLanguage();
 
@@ -33,6 +35,18 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
   );
 
   const isFull = totalApprovedPlayers >= event.max_players;
+  const distanceKm = useMemo(() => {
+    if (!userLocation) return null;
+    const venueCoords = getVenueCoordinates(event.venue);
+    if (!venueCoords) return null;
+    return calculateDistanceKm(
+      userLocation.latitude,
+      userLocation.longitude,
+      venueCoords.latitude,
+      venueCoords.longitude
+    );
+  }, [userLocation, event.venue]);
+
   const isCurrentUserHost = currentUser
     ? currentUser.role === 'HOST' ||
       currentUser.role === 'ADMIN'
@@ -189,6 +203,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
                 <Text weight="medium" style={{ fontSize: '13px' }}>
                   {event.venue_name || event.venue?.name || t('card.court')} ({event.court_numbers || `${t('card.court')} 1`})
                 </Text>
+                {distanceKm !== null && (
+                  <Badge
+                    variant="green"
+                    label={`📍 ${distanceKm} km`}
+                    style={{ fontSize: '11px', height: '20px', padding: '0 var(--spacing-1)' }}
+                  />
+                )}
                 {event.location_url && (
                   <Button
                     size="sm"
@@ -223,7 +244,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onSelect }) => {
           <HStack gap={1} style={{ alignItems: 'center' }}>
             <Shield size={14} color="var(--color-success)" />
             <Text type="supporting" color="secondary">
-              {t('card.host')}: <Text weight="semibold">{event.host?.full_name ? event.host.full_name.split(' ')[0] : 'Host'}</Text> ({event.host?.reliability_score ?? 100}% {t('card.reliability')})
+              {t('card.host')}: <Text weight="semibold">{event.host?.full_name ? event.host.full_name.split(' ')[0] : 'Host'}</Text>
             </Text>
           </HStack>
 

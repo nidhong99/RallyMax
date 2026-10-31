@@ -269,7 +269,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                         <Badge variant="purple" label="Host" />
                       </HStack>
                       <Text type="supporting" color="secondary">
-                        Điểm uy tín: <Text weight="bold" color="accent">{event.host?.reliability_score ?? 100}%</Text> • Đã tổ chức {event.host?.total_matches_played ?? 15}+ trận
+                        Đã tổ chức {event.host?.total_matches_played ?? 15}+ trận
                       </Text>
                     </VStack>
                   </HStack>
@@ -441,7 +441,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                         <TableRow>
                           <TableHeaderCell>Vận động viên</TableHeaderCell>
                           <TableHeaderCell>Trình độ</TableHeaderCell>
-                          <TableHeaderCell>Điểm uy tín</TableHeaderCell>
                           <TableHeaderCell>Trạng thái</TableHeaderCell>
                           <TableHeaderCell>Thanh toán</TableHeaderCell>
                           {isHost && <TableHeaderCell>Thao tác của Host</TableHeaderCell>}
@@ -468,15 +467,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                                 <Badge variant={skill?.badgeVariant || 'neutral'} label={skill?.label.split(' ')[0] || 'TB'} />
                               </TableCell>
 
-                              <TableCell>
-                                <HStack gap={1} style={{ alignItems: 'center' }}>
-                                  <StatusDot
-                                    label={`${p?.reliability_score || 100}%`}
-                                    variant={(p?.reliability_score || 100) >= 90 ? 'success' : 'warning'}
-                                  />
-                                  <Text type="supporting">{p?.reliability_score || 100}%</Text>
-                                </HStack>
-                              </TableCell>
 
                               <TableCell>
                                 <Badge

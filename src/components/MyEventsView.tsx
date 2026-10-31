@@ -450,15 +450,7 @@ export const MyEventsView: React.FC<MyEventsViewProps> = ({
 
                       {/* Host */}
                       <TableCell>
-                        <VStack gap={0}>
-                          <Text weight="medium">{ev.host?.full_name || 'Host'}</Text>
-                          <HStack gap={1} style={{ alignItems: 'center' }}>
-                            <Badge
-                              variant={(ev.host?.reliability_score ?? 100) >= 90 ? 'green' : 'yellow'}
-                              label={`${language === 'vi' ? 'Uy tín' : 'Reliability'} ${ev.host?.reliability_score ?? 100}%`}
-                            />
-                          </HStack>
-                        </VStack>
+                        <Text weight="medium">{ev.host?.full_name || 'Host'}</Text>
                       </TableCell>
 
                       {/* Fee */}
