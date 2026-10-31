@@ -34,7 +34,6 @@ interface AppContextType {
   updateVenue: (venueId: string, venueData: Partial<Venue>) => Promise<void>;
   deleteVenue: (venueId: string) => Promise<void>;
   updateUserRole: (userId: string, newRole: 'PLAYER' | 'HOST' | 'ADMIN', isVerifiedHost?: boolean) => Promise<void>;
-  resetUserReliability: (userId: string) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   purgeMockUsers: () => void;
   refreshProfiles: () => Promise<void>;
@@ -1183,8 +1182,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     if (u.id === targetPlayerId) {
                       const newNoShows = (u.total_no_shows || 0) + 1;
                       const newTotal = (u.total_matches_played || 0) + 1;
-                      const score = Math.max(0, Math.round(((newTotal - newNoShows) / newTotal) * 100));
-                      return { ...u, total_no_shows: newNoShows, total_matches_played: newTotal, reliability_score: score };
+                      return { ...u, total_no_shows: newNoShows, total_matches_played: newTotal };
                     }
                     return u;
                   })
@@ -1361,41 +1359,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const resetUserReliability = async (userId: string) => {
-    setAllUsers(prev => {
-      const updated = prev.map(u => {
-        if (u.id === userId) {
-          return {
-            ...u,
-            reliability_score: 100,
-            total_no_shows: 0,
-          };
-        }
-        return u;
-      });
-      savePublicAppState('rallymax_users', updated);
-      return updated;
-    });
-
-    setCurrentUser(current => {
-      if (current && current.id === userId) {
-        const updated = { ...current, reliability_score: 100, total_no_shows: 0 };
-        savePublicAppState('rallymax_current_user', updated);
-        return updated;
-      }
-      return current;
-    });
-
-      if (supabase) {
-        try {
-          await supabase
-            .from('profiles')
-            .update({ reliability_score: 100, total_no_shows: 0, updated_at: new Date().toISOString() })
-            .eq('id', userId);
-        } catch (e) {}
-      }
-    };
-
   const deleteUser = async (userId: string) => {
     // 1. Remove from allUsers in memory and in localStorage
     setAllUsers(prev => {
@@ -1551,7 +1514,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateVenue,
         deleteVenue,
         updateUserRole,
-        resetUserReliability,
         deleteUser,
         purgeMockUsers,
         refreshProfiles,

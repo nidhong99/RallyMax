@@ -17,7 +17,6 @@ import {
   Users,
   MapPin,
   Calendar,
-  Award,
   Search,
   Plus,
   Edit2,
@@ -26,7 +25,6 @@ import {
   RefreshCw,
   Phone,
   DollarSign,
-  AlertTriangle,
   CheckCircle2,
   Lock,
   Image as ImageIcon,
@@ -45,7 +43,7 @@ interface AdminDashboardViewProps {
   onOpenCreateEvent: () => void;
 }
 
-type AdminSubTab = 'venues' | 'users' | 'events' | 'reliability';
+type AdminSubTab = 'venues' | 'users' | 'events';
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   onSelectEvent,
@@ -61,7 +59,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     updateVenue,
     deleteVenue,
     updateUserRole,
-    resetUserReliability,
     deleteUser,
     refreshProfiles,
     refreshVenues,
@@ -86,8 +83,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [userPageSize, setUserPageSize] = useState(10);
   const [eventPage, setEventPage] = useState(1);
   const [eventPageSize, setEventPageSize] = useState(10);
-  const [disputePage, setDisputePage] = useState(1);
-  const [disputePageSize, setDisputePageSize] = useState(10);
 
   // Venue Add / Edit Modal state
   const [isVenueModalOpen, setIsVenueModalOpen] = useState(false);
@@ -135,9 +130,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const playerCount = allUsers.filter(u => u.role === 'PLAYER').length;
   const totalEventsCount = events.length;
   const activeEventsCount = events.filter(e => e.status === 'OPEN' || e.status === 'FULL').length;
-  const avgReliability = allUsers.length > 0
-    ? Math.round(allUsers.reduce((acc, u) => acc + (u.reliability_score ?? 100), 0) / allUsers.length)
-    : 100;
 
   // Handlers for Venue Modal
   const handleOpenAddVenue = () => {
@@ -296,8 +288,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     return e.status === eventStatusFilter;
   });
 
-  const disputedUsers = allUsers.filter(u => (u.reliability_score ?? 100) < 95 || (u.total_no_shows ?? 0) > 0);
-
   // Paginated slices
   const venueTotal = filteredVenues.length;
   const safeVenuePage = Math.min(venuePage, Math.max(1, Math.ceil(venueTotal / venuePageSize)));
@@ -314,10 +304,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const eventStartIdx = (safeEventPage - 1) * eventPageSize;
   const paginatedEvents = filteredEvents.slice(eventStartIdx, eventStartIdx + eventPageSize);
 
-  const disputeTotal = disputedUsers.length;
-  const safeDisputePage = Math.min(disputePage, Math.max(1, Math.ceil(disputeTotal / disputePageSize)));
-  const disputeStartIdx = (safeDisputePage - 1) * disputePageSize;
-  const paginatedDisputes = disputedUsers.slice(disputeStartIdx, disputeStartIdx + disputePageSize);
 
   return (
     <VStack gap={5} style={{ width: '100%' }}>
@@ -396,23 +382,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           </VStack>
         </Card>
 
-        {/* KPI 4: Reliability */}
-        <Card style={{ flex: '1 1 200px', padding: 'var(--spacing-4)' }}>
-          <VStack gap={1}>
-            <HStack gap={2} style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text type="supporting" color="secondary" weight="semibold">
-                ĐỘ UY TÍN BÌNH QUÂN
-              </Text>
-              <Award size={18} color="var(--color-icon-accent)" />
-            </HStack>
-            <Heading level={2} style={{ margin: 0, color: 'var(--color-text-primary)' }}>
-              {avgReliability}%
-            </Heading>
-            <Text type="supporting" color="secondary" style={{ fontSize: '12px' }}>
-              {disputedUsers.length} thành viên có cảnh báo
-            </Text>
-          </VStack>
-        </Card>
       </HStack>
 
       {/* 3. Sub-Tab Navigation */}
@@ -436,11 +405,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           value="events"
           label="Kèo toàn hệ thống"
           endContent={<Badge variant="neutral" label={String(events.length)} />}
-        />
-        <Tab
-          value="reliability"
-          label="Giám sát Uy tín & Khiếu nại"
-          endContent={<Badge variant="neutral" label={String(disputedUsers.length)} />}
         />
       </TabList>
 
@@ -760,15 +724,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   <th style={{ padding: 'var(--spacing-3)' }}>Phân quyền vai trò</th>
                   <th style={{ padding: 'var(--spacing-3)' }}>Huy hiệu Host</th>
                   <th style={{ padding: 'var(--spacing-3)' }}>Trận đấu</th>
-                  <th style={{ padding: 'var(--spacing-3)' }}>Điểm uy tín</th>
                   <th style={{ padding: 'var(--spacing-3)', textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedUsers.map((u) => {
                   const displayRole: UserRole = u.role || 'PLAYER';
-                  const score = u.reliability_score ?? 100;
-                  const isLowScore = score < 90;
                   const isCurrentAdmin = u.id === currentUser?.id;
 
                   return (
@@ -776,7 +737,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       key={u.id}
                       style={{
                         borderBottom: '1px solid var(--color-border)',
-                        background: isLowScore ? 'rgba(239, 68, 68, 0.03)' : 'transparent',
                       }}
                     >
                       <td style={{ padding: 'var(--spacing-3)' }}>
@@ -861,31 +821,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           )}
                         </VStack>
                       </td>
-                      <td style={{ padding: 'var(--spacing-3)' }}>
-                        <Badge
-                          variant={score >= 90 ? 'green' : score >= 70 ? 'yellow' : 'red'}
-                          label={`${score}%`}
-                        />
-                      </td>
                       <td style={{ padding: 'var(--spacing-3)', textAlign: 'right' }}>
                         <HStack gap={1} style={{ justifyContent: 'flex-end' }}>
-                          {score < 100 && (
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              label="Khôi phục 100%"
-                              onClick={async () => {
-                                if (confirm(`Khôi phục 100% điểm uy tín cho ${u.full_name || u.email}?`)) {
-                                  try {
-                                    await resetUserReliability(u.id);
-                                    showSuccess(`Đã khôi phục 100% uy tín cho ${u.full_name}!`);
-                                  } catch (err) {
-                                    alert('Lỗi: ' + (err as Error).message);
-                                  }
-                                }
-                              }}
-                            />
-                          )}
                           {!isCurrentAdmin && (
                             <Button
                               size="sm"
@@ -1155,130 +1092,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         </VStack>
       )}
 
-      {/* 7. Tab 4: RELIABILITY & DISPUTES */}
-      {activeSubTab === 'reliability' && (
-        <VStack gap={4} style={{ width: '100%' }}>
-          <Card
-            style={{
-              padding: 'var(--spacing-4)',
-              background: 'rgba(239, 68, 68, 0.05)',
-              border: '1px solid rgba(239, 68, 68, 0.2)',
-            }}
-          >
-            <HStack gap={2} style={{ alignItems: 'center' }}>
-              <AlertTriangle size={20} color="var(--color-destructive)" />
-              <VStack gap={0}>
-                <Text weight="bold">Cơ chế bảo vệ sự uy tín của RallyMax</Text>
-                <Text type="supporting" color="secondary" style={{ fontSize: '12px' }}>
-                  Hệ thống tự động trừ 10 điểm uy tín khi bùng kèo (No-show) hoặc hủy sát giờ (&lt;2 tiếng).
-                  Admin có toàn quyền kiểm tra bằng chứng và khôi phục điểm cho thành viên.
-                </Text>
-              </VStack>
-            </HStack>
-          </Card>
-
-          <Card style={{ padding: 0, overflow: 'hidden' }}>
-            {disputedUsers.length === 0 ? (
-              <VStack gap={2} style={{ padding: 'var(--spacing-6)', alignItems: 'center' }}>
-                <CheckCircle2 size={32} color="#10b981" />
-                <Text weight="bold">Tất cả người chơi đều có điểm uy tín rất tốt!</Text>
-                <Text color="secondary" style={{ fontSize: '13px' }}>
-                  Hiện không có khiếu nại hay vi phạm nào cần giải quyết.
-                </Text>
-              </VStack>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ background: 'var(--color-background-muted)', borderBottom: '1px solid var(--color-border)' }}>
-                    <th style={{ padding: 'var(--spacing-3)' }}>Thành viên</th>
-                    <th style={{ padding: 'var(--spacing-3)' }}>Email liên hệ</th>
-                    <th style={{ padding: 'var(--spacing-3)' }}>Điểm hiện tại</th>
-                    <th style={{ padding: 'var(--spacing-3)' }}>Số lần No-show</th>
-                    <th style={{ padding: 'var(--spacing-3)', textAlign: 'right' }}>Giải quyết khiếu nại</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedDisputes.map((u) => (
-                    <tr key={u.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ padding: 'var(--spacing-3)' }}>
-                        <HStack gap={2} style={{ alignItems: 'center' }}>
-                          <Avatar size="sm" src={u.avatar_url} name={u.full_name || 'User'} />
-                          <Text weight="bold">{u.full_name || 'Vận động viên'}</Text>
-                        </HStack>
-                      </td>
-                      <td style={{ padding: 'var(--spacing-3)' }}>
-                        <Text style={{ fontFamily: 'monospace' }}>{u.email}</Text>
-                      </td>
-                      <td style={{ padding: 'var(--spacing-3)' }}>
-                        <Badge
-                          variant={(u.reliability_score ?? 100) >= 90 ? 'yellow' : 'red'}
-                          label={`${u.reliability_score ?? 100}%`}
-                        />
-                      </td>
-                      <td style={{ padding: 'var(--spacing-3)' }}>
-                        <Text style={{ color: 'var(--color-destructive)', fontWeight: 600 }}>
-                          {u.total_no_shows ?? 0} lần
-                        </Text>
-                      </td>
-                      <td style={{ padding: 'var(--spacing-3)', textAlign: 'right' }}>
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          label="Khôi phục 100% điểm uy tín"
-                          onClick={async () => {
-                            if (confirm(`Xác nhận xóa vi phạm và khôi phục 100% uy tín cho ${u.full_name}?`)) {
-                              try {
-                                await resetUserReliability(u.id);
-                                showSuccess(`Đã khôi phục 100% uy tín cho ${u.full_name}!`);
-                              } catch (err) {
-                                alert('Lỗi: ' + (err as Error).message);
-                              }
-                            }
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            {/* Disputes Pagination footer */}
-            {disputeTotal > 0 && (
-              <HStack
-                gap={2}
-                style={{
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: 'var(--spacing-3) var(--spacing-4)',
-                  borderTop: '1px solid var(--color-border)',
-                  background: 'var(--color-background-surface)',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <Text type="supporting" color="secondary" style={{ fontSize: '13px' }}>
-                  Hiển thị {disputeStartIdx + 1} - {Math.min(disputeStartIdx + disputePageSize, disputeTotal)} trong {disputeTotal} tài khoản
-                </Text>
-                <Pagination
-                  page={safeDisputePage}
-                  onChange={setDisputePage}
-                  totalItems={disputeTotal}
-                  pageSize={disputePageSize}
-                  onPageSizeChange={(newSize) => {
-                    setDisputePageSize(newSize);
-                    setDisputePage(1);
-                  }}
-                  pageSizeOptions={[10, 20, 50]}
-                  variant="pages"
-                  size="sm"
-                />
-              </HStack>
-            )}
-          </Card>
-        </VStack>
-      )}
-
-      {/* 8. MODAL: Add / Edit Venue */}
+      {/* 8. MODAL{/* 8. MODAL: Add / Edit Venue */}
       <Dialog
         isOpen={isVenueModalOpen}
         onOpenChange={(open) => {

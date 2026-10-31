@@ -8,7 +8,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { useApp } from '../context/AppContext';
 import { SkillLevel, DominantHand, PlayStyle, SKILL_LABELS, PLAY_STYLE_LABELS } from '../types/database';
 import { DISTRICTS } from '../constants/locations';
-import { Shield, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -78,40 +78,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     >
       <VStack gap={4}>
         <DialogHeader
-          title="Hồ Sơ Cầu Lông & Điểm Uy Tín"
+          title="Hồ Sơ Cầu Lông"
           subtitle="Thông tin chuyên môn để Host và Player dễ dàng ghép cặp chuẩn trình độ"
           onOpenChange={(open) => {
             if (!open) onClose();
           }}
         />
-
-        {/* Reputation Score Card */}
-        <HStack
-          gap={3}
-          style={{
-            padding: 'var(--spacing-3)',
-            background: 'var(--color-background-muted)',
-            borderRadius: 'var(--radius-element)',
-            border: '1px solid var(--color-border)',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <VStack gap={1}>
-            <HStack gap={1} style={{ alignItems: 'center' }}>
-              <Shield size={18} color="var(--color-success)" />
-              <Text weight="bold">Điểm uy tín (Reliability): {currentUser.reliability_score}%</Text>
-            </HStack>
-            <Text type="supporting" color="secondary">
-              Tham gia {currentUser.total_matches_played} trận • Bùng kèo: {currentUser.total_no_shows} lần
-            </Text>
-          </VStack>
-
-          <Badge
-            variant={currentUser.reliability_score >= 95 ? 'green' : currentUser.reliability_score >= 80 ? 'yellow' : 'red'}
-            label={currentUser.reliability_score >= 95 ? 'Vận động viên uy tín' : 'Cần cải thiện'}
-          />
-        </HStack>
 
         {/* Tab switch */}
         <HStack gap={2}>

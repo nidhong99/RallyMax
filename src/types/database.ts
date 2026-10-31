@@ -44,6 +44,8 @@ export interface District {
   code: string;
   province_code: string;
   name: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export type UserRole = 'PLAYER' | 'HOST' | 'ADMIN';
@@ -63,7 +65,7 @@ export interface Profile {
   district_code?: string;
   role?: UserRole;
   is_verified_host?: boolean;
-  reliability_score: number; // 0 - 100%
+  reliability_score?: number;
   total_matches_played: number;
   total_no_shows: number;
   created_at?: string;
